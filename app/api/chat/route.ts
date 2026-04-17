@@ -1,10 +1,10 @@
-import { streamText, convertToModelMessages } from 'ai';
+import { streamText, convertToModelMessages, stepCountIs } from 'ai';
 import { google } from '@ai-sdk/google';
 import { SYSTEM_PROMPT } from '@/lib/ai/system-prompt';
 import { tools } from '@/lib/ai/tools';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   const { messages, sessionId, chatId, isAuthenticated } = await req.json();
@@ -68,6 +68,7 @@ export async function POST(req: Request) {
     messages: modelMessages,
     tools: activeTools,
     toolChoice: 'auto',
+    stopWhen: stepCountIs(5),
     onFinish: async ({ text }) => {
       // Save assistant response to DB
       if (currentChatId && text) {
