@@ -73,7 +73,7 @@ export async function POST(req: Request) {
   });
 
   // Return stream response with chatId in headers
-  return result.toDataStreamResponse({
+  return result.toUIMessageStreamResponse({
     headers: currentChatId ? { 'X-Chat-Id': currentChatId } : undefined,
   });
 }
