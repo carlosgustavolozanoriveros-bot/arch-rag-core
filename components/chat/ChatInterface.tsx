@@ -139,38 +139,6 @@ export function ChatInterface() {
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
   }, []);
 
-  // Auto-scroll
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, showLoginWall, visibleProducts]);
-
-  // Process messages for tool calls
-  useEffect(() => {
-    for (const msg of messages) {
-      if (msg.role === 'assistant' && msg.parts) {
-        for (const part of msg.parts) {
-          if (part.type === 'tool-invocation') {
-            const toolCall = part as unknown as { toolName: string; args: Record<string, unknown> };
-            
-            if (toolCall.toolName === 'search_products') {
-              handleSearchProducts(toolCall.args as { query: string });
-            }
-            if (toolCall.toolName === 'require_login' && !user) {
-              const args = toolCall.args as { message: string; productCount: number };
-              setLoginWallMessage(args.message);
-              setLoginWallCount(args.productCount);
-              setShowLoginWall(true);
-            }
-            if (toolCall.toolName === 'show_product_cards') {
-              const args = toolCall.args as { resourceIds: string[] };
-              handleShowProducts(args.resourceIds);
-            }
-          }
-        }
-      }
-    }
-  }, [messages, user]);
-
   const handleSearchProducts = useCallback(async (args: { query: string }) => {
     try {
       const res = await fetch('/api/tools', {
@@ -203,15 +171,53 @@ export function ChatInterface() {
     }
   }, []);
 
+  // Auto-scroll
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, showLoginWall, visibleProducts]);
+
+  useEffect(() => {
+    for (const msg of messages) {
+      if (msg.role === 'assistant' && msg.parts) {
+        for (const part of msg.parts) {
+          // Check for any tool invocation part (static or dynamic)
+          const isToolCall = (part.type as string).startsWith('tool-') || part.type === 'tool-invocation';
+          if (isToolCall) {
+            // Using 'any' cast because the exact shape of tool calls is internal to AI SDK v6
+            const toolCall = part as any;
+            const toolName = toolCall.toolName || (part.type as string).replace('tool-', '');
+            const args = toolCall.args;
+            
+            if (toolName === 'search_products' && args) {
+              handleSearchProducts(args as { query: string });
+            }
+            if (toolName === 'require_login' && !user && args) {
+              const reqArgs = args as { message: string; productCount: number };
+              setLoginWallMessage(reqArgs.message);
+              setLoginWallCount(reqArgs.productCount);
+              setShowLoginWall(true);
+            }
+            if (toolName === 'show_product_cards' && args) {
+              const showArgs = args as { resourceIds: string[] };
+              handleShowProducts(showArgs.resourceIds);
+            }
+          }
+        }
+      }
+    }
+  }, [messages, user, handleSearchProducts, handleShowProducts]);
+
   const hasMessages = messages.length > 0;
 
-  // Extract text content from message parts
+  // Extract text content
   const getMessageText = (msg: typeof messages[0]): string => {
-    if (!msg.parts) return '';
-    return msg.parts
-      .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-      .map(p => p.text)
-      .join('');
+    if (msg.parts && msg.parts.length > 0) {
+      const textParts = msg.parts
+        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+        .map(p => p.text);
+      if (textParts.length > 0) return textParts.join('');
+    }
+    return '';
   };
 
   return (
