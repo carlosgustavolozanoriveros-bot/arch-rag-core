@@ -1,4 +1,4 @@
-import { streamText } from 'ai';
+import { streamText, convertToModelMessages } from 'ai';
 import { google } from '@ai-sdk/google';
 import { SYSTEM_PROMPT } from '@/lib/ai/system-prompt';
 import { tools } from '@/lib/ai/tools';
@@ -8,27 +8,35 @@ export const maxDuration = 30;
 
 export async function POST(req: Request) {
   const { messages, sessionId, chatId, isAuthenticated } = await req.json();
+  
+  // Normalize messages for AI SDK v6 schema compatibility
+  const modelMessages = await convertToModelMessages(messages);
 
   const supabase = createServiceRoleClient();
 
   // Ensure chat exists in DB
   let currentChatId = chatId;
   if (!currentChatId && sessionId) {
+    // Extract first message text for title
+    const firstMsg = modelMessages[0];
+    const title = (firstMsg?.content?.[0] as any)?.text || 'Nueva conversación';
+    
     const { data: newChat } = await supabase
       .from('chats')
-      .insert({ session_id: sessionId, title: messages[0]?.content?.slice(0, 100) || 'Nueva conversación' })
+      .insert({ session_id: sessionId, title: title.slice(0, 100) })
       .select('id')
       .single();
     currentChatId = newChat?.id;
   }
 
   // Save user message to DB
-  const lastUserMessage = messages[messages.length - 1];
+  const lastUserMessage = modelMessages[modelMessages.length - 1];
   if (currentChatId && lastUserMessage?.role === 'user') {
+    const textContent = (lastUserMessage.content?.[0] as any)?.text || '';
     await supabase.from('messages').insert({
       chat_id: currentChatId,
       role: 'user',
-      content: lastUserMessage.content,
+      content: textContent,
     });
   }
 
@@ -55,9 +63,9 @@ export async function POST(req: Request) {
     : { search_products: tools.search_products, require_login: tools.require_login };
 
   const result = streamText({
-    model: google('gemini-1.5-flash'),
+    model: google('gemini-2.5-flash'),
     system: SYSTEM_PROMPT,
-    messages: contextMessages,
+    messages: modelMessages,
     tools: activeTools,
     toolChoice: 'auto',
     onFinish: async ({ text }) => {
