@@ -58,13 +58,21 @@ export async function POST(req: Request) {
     : messages;
 
   // Select tools based on auth state
-  const activeTools = isAuthenticated
-    ? tools
-    : { search_products: tools.search_products, require_login: tools.require_login };
+  let activeTools: any = {};
+  if (isAuthenticated) {
+    // If authenticated, ONLY allow search and show product cards
+    activeTools = { search_products: tools.search_products, show_product_cards: tools.show_product_cards };
+  } else {
+    // If not, allow search and require login
+    activeTools = { search_products: tools.search_products, require_login: tools.require_login };
+  }
+
+  // Inject authentication state into the system prompt
+  const dynamicSystemPrompt = `${SYSTEM_PROMPT}\n\n[USER AUTHENTICATION STATUS]\nThe user is currently ${isAuthenticated ? 'AUTHENTICATED AND LOGGED IN' : 'NOT AUTHENTICATED'}.\n${isAuthenticated ? 'You MUST completely ignore any previous instructions to ask the user to log in. Since they are logged in, NEVER call require_login. Instead, use `show_product_cards` directly to present the products.' : 'If you find products, you MUST call `require_login` as stated in your main instructions.'}`;
 
   const result = streamText({
     model: google('gemini-2.5-flash'),
-    system: SYSTEM_PROMPT,
+    system: dynamicSystemPrompt,
     messages: modelMessages,
     tools: activeTools,
     toolChoice: 'auto',

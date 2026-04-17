@@ -3,9 +3,9 @@
 import { useChat } from '@ai-sdk/react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as React from 'react';
-import { DefaultChatTransport } from 'ai';
+import { DefaultChatTransport, UIMessage } from 'ai';
 import { createClient } from '@/lib/supabase/client';
-import { getSessionId, getChatId, setChatId } from '@/lib/session';
+import { getSessionId } from '@/lib/session';
 import { MessageBubble } from './MessageBubble';
 import { LoginWall } from './LoginWall';
 import { ProductCard } from './ProductCard';
@@ -18,26 +18,58 @@ interface UserState {
   display_name?: string;
 }
 
-export function ChatInterface() {
+interface ChatInterfaceProps {
+  currentChatId: string | null;
+  onChatCreated?: (chatId: string) => void;
+}
+
+export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfaceProps) {
   const [user, setUser] = useState<UserState | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
-  const [chatId, setChatIdState] = useState<string | null>(null);
   const [pendingProducts, setPendingProducts] = useState<MatchedResource[]>([]);
   const [showLoginWall, setShowLoginWall] = useState(false);
   const [loginWallMessage, setLoginWallMessage] = useState('');
   const [loginWallCount, setLoginWallCount] = useState(0);
   const [visibleProducts, setVisibleProducts] = useState<MatchedResource[]>([]);
   const [inputValue, setInputValue] = useState('');
+  const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
+  const [isInitializing, setIsInitializing] = useState(true);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const supabase = createClient();
 
-  // Initialize session
+  // Load chat history if currentChatId is present
+  useEffect(() => {
+    async function loadHistory() {
+      setIsInitializing(true);
+      if (currentChatId) {
+        try {
+          const res = await fetch(`/api/chat/history?chatId=${currentChatId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.messages && data.messages.length > 0) {
+              setInitialMessages(data.messages);
+            } else {
+              setInitialMessages([]);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to load history", error);
+          setInitialMessages([]);
+        }
+      } else {
+        setInitialMessages([]);
+      }
+      setIsInitializing(false);
+    }
+    loadHistory();
+  }, [currentChatId]);
+
+  // Initialize session and user
   useEffect(() => {
     const sid = getSessionId();
     setSessionId(sid);
-    const existingChat = getChatId();
-    if (existingChat) setChatIdState(existingChat);
 
     // Check if user is logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -83,7 +115,7 @@ export function ChatInterface() {
     );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [pendingProducts, supabase.auth]);
 
   // Memoize transport to avoid re-creating on every render
   const transport = React.useMemo(() => {
@@ -91,14 +123,16 @@ export function ChatInterface() {
       api: '/api/chat',
       body: {
         sessionId,
-        chatId: chatId,
+        chatId: currentChatId,
         isAuthenticated: !!user,
       },
     });
-  }, [sessionId, chatId, user]);
+  }, [sessionId, currentChatId, user]);
 
   const { messages, sendMessage, status } = useChat({
     transport,
+    messages: initialMessages,
+    id: currentChatId || 'new', // Forces hook to reset when id changes
   });
 
   const isLoading = status === 'streaming' || status === 'submitted';
@@ -186,7 +220,8 @@ export function ChatInterface() {
             // Using 'any' cast because the exact shape of tool calls is internal to AI SDK v6
             const toolCall = part as any;
             const toolName = toolCall.toolName || (part.type as string).replace('tool-', '');
-            const args = toolCall.args;
+            // In AI SDK v6, UI tool invocations store arguments in 'input', not 'args'
+            const args = toolCall.args || toolCall.input;
             
             if (toolName === 'search_products' && args) {
               handleSearchProducts(args as { query: string });
@@ -224,7 +259,11 @@ export function ChatInterface() {
     <div className="chat-container">
       <div className="chat-messages">
         <div className="chat-messages-inner">
-          {!hasMessages && (
+          {isInitializing ? (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
+              Cargando conversación...
+            </div>
+          ) : !hasMessages && (
             <div className="welcome-screen">
               <div className="welcome-icon">🏗️</div>
               <h1 className="welcome-title">

@@ -1,13 +1,9 @@
-import { Header } from '@/components/Header';
-import { ChatInterface } from '@/components/chat/ChatInterface';
+import { ChatContainer } from '../components/chat/ChatContainer';
 
 export default function Home() {
   return (
-    <div className="app-layout">
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <Header />
-        <ChatInterface />
-      </main>
+    <div className="app-layout" style={{ height: '100vh', width: '100vw', overflow: 'hidden' }}>
+      <ChatContainer />
     </div>
   );
 }
