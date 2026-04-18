@@ -6,6 +6,7 @@ interface ProductData {
   id: string;
   nombre_ui: string;
   nombre_archivo?: string | null;
+  descripcion_card?: string | null;
   chunk_semantico?: string;
   tipo_recurso?: string;
   categoria?: string;
@@ -27,45 +28,45 @@ interface ProductCardProps {
 
 /**
  * Transform Google Drive download URLs to embeddable thumbnail URLs
- * Input:  https://drive.usercontent.google.com/download?id=XXXXX&export=view&authuser=0
- * Output: https://drive.google.com/thumbnail?id=XXXXX&sz=w400
  */
 function toEmbeddableUrl(url: string): string {
-  // Extract Google Drive file ID from various URL formats
   const patterns = [
-    /[?&]id=([a-zA-Z0-9_-]+)/,           // ?id=XXXXX or &id=XXXXX
-    /\/d\/([a-zA-Z0-9_-]+)/,              // /d/XXXXX/
-    /\/file\/d\/([a-zA-Z0-9_-]+)/,        // /file/d/XXXXX/
+    /[?&]id=([a-zA-Z0-9_-]+)/,
+    /\/d\/([a-zA-Z0-9_-]+)/,
+    /\/file\/d\/([a-zA-Z0-9_-]+)/,
   ];
-
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match?.[1]) {
       return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w400`;
     }
   }
-
-  // Not a Google Drive URL, return as-is
   return url;
+}
+
+/** Format tipo_recurso for display */
+function formatTipoRecurso(tipo: string): string {
+  const map: Record<string, string> = {
+    'familia_revit': 'Familia Revit',
+    'proyecto_revit': 'Proyecto Revit',
+    'bloque_autocad': 'Bloque AutoCAD',
+    'escena_d5': 'Escena D5 Render',
+    'curso': 'Curso',
+    'textura': 'Textura',
+    'modelo_3d': 'Modelo 3D',
+  };
+  return map[tipo] || tipo.replace(/_/g, ' ');
 }
 
 export function ProductCard({ product, userRole, purchased = false, onRequireLogin }: ProductCardProps) {
   const [imgError, setImgError] = useState(false);
 
-  const formatCategory = (cat: string) => {
-    return cat.replace(/_/g, ' ');
-  };
-
-  // Clean display name
-  const displayName = (() => {
-    if (product.nombre_archivo) {
-      return product.nombre_archivo.replace(/^[A-Z]+-[A-Z]+-\d+_/, '').replace(/_/g, ' ');
-    }
-    return product.nombre_ui;
-  })();
-
   const price = product.precio_usd ? Number(product.precio_usd) : 8;
   const thumbnailUrl = product.url_thumbnail ? toEmbeddableUrl(product.url_thumbnail) : null;
+
+  // Description: use descripcion_card if available, otherwise truncate chunk_semantico
+  const description = product.descripcion_card 
+    || (product.chunk_semantico ? product.chunk_semantico.slice(0, 100) + '...' : '');
 
   const handleBuy = () => {
     if (!userRole) {
@@ -75,13 +76,21 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     console.log('Buy product:', product.id);
   };
 
+  const handleSubscribe = () => {
+    if (!userRole) {
+      onRequireLogin?.();
+      return;
+    }
+    console.log('Subscribe from product:', product.id);
+  };
+
   return (
     <div className="product-card">
       <div className="product-card-thumb">
         {thumbnailUrl && !imgError ? (
           <img
             src={thumbnailUrl}
-            alt={displayName}
+            alt={product.nombre_ui}
             loading="lazy"
             onError={() => setImgError(true)}
           />
@@ -102,21 +111,24 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       </div>
 
       <div className="product-card-body">
-        {product.categoria && (
+        {product.tipo_recurso && (
           <div className="product-card-category">
-            {formatCategory(product.categoria)}
+            {formatTipoRecurso(product.tipo_recurso)}
           </div>
         )}
 
-        <h4 className="product-card-title">{displayName}</h4>
+        <h4 className="product-card-title">{product.nombre_ui}</h4>
+
+        {description && (
+          <p className="product-card-desc">{description}</p>
+        )}
 
         <div className="product-card-footer">
-          <span className="product-card-price">${price}</span>
-          <button
-            className="product-card-buy-btn"
-            onClick={handleBuy}
-          >
-            {purchased ? '✓ Comprado' : 'Comprar'}
+          <button className="product-card-buy-btn" onClick={handleBuy}>
+            Comprar ${price}
+          </button>
+          <button className="product-card-sub-btn" onClick={handleSubscribe}>
+            PRO $20/mes
           </button>
         </div>
       </div>
