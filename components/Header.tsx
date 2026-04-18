@@ -64,7 +64,7 @@ export function Header({ toggleSidebar }: HeaderProps) {
       </div>
 
       <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        {user && (
+        {user ? (
           <div className="user-menu" style={{ position: 'relative' }} ref={dropdownRef}>
             <button 
               className="user-avatar-btn"
@@ -110,6 +110,32 @@ export function Header({ toggleSidebar }: HeaderProps) {
               </div>
             )}
           </div>
+        ) : (
+          <button
+            onClick={async () => {
+              await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo: window.location.origin }
+              });
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.5rem 1rem', background: 'var(--bg-tertiary, #1a1a26)',
+              border: '1px solid var(--border-default, rgba(255,255,255,0.1))',
+              borderRadius: '20px', color: 'var(--text-primary, #f0f0f5)',
+              cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500,
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.borderColor = 'var(--accent-gold, #c8a97e)'; e.currentTarget.style.color = 'var(--accent-gold, #c8a97e)'; }}
+            onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--border-default, rgba(255,255,255,0.1))'; e.currentTarget.style.color = 'var(--text-primary, #f0f0f5)'; }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+            Iniciar sesión
+          </button>
         )}
       </div>
     </header>

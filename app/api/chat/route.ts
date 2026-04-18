@@ -14,20 +14,8 @@ export async function POST(req: Request) {
 
   const supabase = createServiceRoleClient();
 
-  // Ensure chat exists in DB
+  // chatId should already be set by the frontend via /api/chat/create
   let currentChatId = chatId;
-  if (!currentChatId && sessionId) {
-    // Extract first message text for title
-    const firstMsg = modelMessages[0];
-    const title = (firstMsg?.content?.[0] as any)?.text || 'Nueva conversación';
-    
-    const { data: newChat } = await supabase
-      .from('chats')
-      .insert({ session_id: sessionId, title: title.slice(0, 100) })
-      .select('id')
-      .single();
-    currentChatId = newChat?.id;
-  }
 
   // Save user message to DB
   const lastUserMessage = modelMessages[modelMessages.length - 1];
@@ -57,18 +45,9 @@ export async function POST(req: Request) {
     ? dbMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
     : messages;
 
-  // Select tools based on auth state
-  let activeTools: any = {};
-  if (isAuthenticated) {
-    // If authenticated, ONLY allow search and show product cards
-    activeTools = { search_products: tools.search_products, show_product_cards: tools.show_product_cards };
-  } else {
-    // If not, allow search and require login
-    activeTools = { search_products: tools.search_products, require_login: tools.require_login };
-  }
+  const activeTools = { search_products: tools.search_products };
 
-  // Inject authentication state into the system prompt
-  const dynamicSystemPrompt = `${SYSTEM_PROMPT}\n\n[USER AUTHENTICATION STATUS]\nThe user is currently ${isAuthenticated ? 'AUTHENTICATED AND LOGGED IN' : 'NOT AUTHENTICATED'}.\n${isAuthenticated ? 'You MUST completely ignore any previous instructions to ask the user to log in. Since they are logged in, NEVER call require_login. Instead, use `show_product_cards` directly to present the products.' : 'If you find products, you MUST call `require_login` as stated in your main instructions.'}`;
+  const dynamicSystemPrompt = `${SYSTEM_PROMPT}`;
 
   const result = streamText({
     model: google('gemini-2.5-flash'),

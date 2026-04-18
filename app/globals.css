@@ -206,9 +206,10 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   margin-top: 0;
   max-width: 100%;
+  overflow: hidden;
 }
 
 .chat-messages {
@@ -520,19 +521,35 @@ body {
 
 /* ---- Product Cards ---- */
 .product-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
-  padding: 8px 0;
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 12px;
+  padding: 12px 0 20px 0;
   animation: cardsGridIn 0.5s ease-out;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.product-cards-grid::-webkit-scrollbar {
+  height: 5px;
+}
+.product-cards-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+.product-cards-grid::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-full);
 }
 
 @keyframes cardsGridIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .product-card {
+  flex: 0 0 210px;
+  scroll-snap-align: start;
   background: var(--gradient-card);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
@@ -542,14 +559,13 @@ body {
 
 .product-card:hover {
   border-color: var(--border-gold);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   box-shadow: var(--shadow-glow);
 }
 
 .product-card-thumb {
   width: 100%;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
+  aspect-ratio: 4 / 3;
   background: var(--bg-tertiary);
   display: flex;
   align-items: center;
@@ -565,96 +581,71 @@ body {
 }
 
 .product-card:hover .product-card-thumb img {
-  transform: scale(1.03);
+  transform: scale(1.05);
 }
 
 .product-card-body {
-  padding: 14px;
+  padding: 10px 12px 12px;
 }
 
 .product-card-category {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1.2px;
   color: var(--accent-gold);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .product-card-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 6px;
-  line-height: 1.3;
-}
-
-.product-card-desc {
   font-size: 12.5px;
-  color: var(--text-secondary);
-  line-height: 1.5;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.35;
   margin-bottom: 10px;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.product-card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 12px;
-}
-
-.product-card-tag {
-  font-size: 10px;
-  font-weight: 500;
-  padding: 2px 8px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-full);
-  color: var(--text-muted);
-}
-
-.product-card-tag.revit {
-  color: var(--accent-blue);
-  border-color: rgba(91, 141, 239, 0.2);
-  background: rgba(91, 141, 239, 0.08);
-}
-
-.product-card-tag.parametric {
-  color: var(--accent-green);
-  border-color: rgba(78, 203, 113, 0.2);
-  background: rgba(78, 203, 113, 0.08);
 }
 
 .product-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding-top: 10px;
+  gap: 6px;
+  padding-top: 8px;
   border-top: 1px solid var(--border-subtle);
 }
 
 .product-card-price {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--text-primary);
 }
 
-.product-card-price span {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-muted);
+.product-card-buy-btn {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  background: var(--gradient-gold);
+  color: #0a0a0f;
+  transition: all var(--transition-fast);
 }
 
-.product-card-actions {
-  display: flex;
-  gap: 6px;
+.product-card-buy-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 12px rgba(200, 169, 126, 0.3);
 }
+
 
 /* ---- Buttons ---- */
 .btn {

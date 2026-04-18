@@ -27,19 +27,21 @@ export function Sidebar({ currentChatId, isOpen, toggleSidebar, onSelectChat, on
   useEffect(() => {
     async function loadChats() {
       const supabase = createClient();
-      const sessionId = getSessionId();
-      
       const { data: { session } } = await supabase.auth.getSession();
       
-      let query = supabase.from('chats').select('id, title, created_at').order('created_at', { ascending: false }).limit(20);
-      
-      if (session?.user) {
-        query = query.eq('user_id', session.user.id);
-      } else {
-        query = query.eq('session_id', sessionId);
+      if (!session?.user) {
+        setChats([]);
+        setIsLoading(false);
+        return;
       }
       
-      const { data, error } = await query;
+      const { data, error } = await supabase
+        .from('chats')
+        .select('id, title, created_at')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+        
       if (!error && data) {
         setChats(data);
       }
@@ -123,7 +125,10 @@ export function Sidebar({ currentChatId, isOpen, toggleSidebar, onSelectChat, on
           {isLoading ? (
             <div style={{ padding: '0.5rem', textAlign: 'center', opacity: 0.5, fontSize: '0.9rem' }}>...</div>
           ) : chats.length === 0 ? (
-            <div style={{ padding: '0.5rem', textAlign: 'center', opacity: 0.5, fontSize: '0.8rem' }}>No hay chats</div>
+            <div style={{ padding: '0.5rem', textAlign: 'center', opacity: 0.5, fontSize: '0.8rem', lineHeight: '1.4' }}>
+              No hay chats.<br/><br/>
+              <span style={{ fontSize: '0.75rem', color: '#ffa600' }}>Inicia sesión para guardar tu historial.</span>
+            </div>
           ) : (
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {chats.map(chat => (

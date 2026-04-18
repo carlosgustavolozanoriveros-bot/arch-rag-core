@@ -26,11 +26,7 @@ interface ChatInterfaceProps {
 export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfaceProps) {
   const [user, setUser] = useState<UserState | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
-  const [pendingProducts, setPendingProducts] = useState<MatchedResource[]>([]);
-  const [showLoginWall, setShowLoginWall] = useState(false);
-  const [loginWallMessage, setLoginWallMessage] = useState('');
-  const [loginWallCount, setLoginWallCount] = useState(0);
-  const [visibleProducts, setVisibleProducts] = useState<MatchedResource[]>([]);
+
   const [inputValue, setInputValue] = useState('');
   const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -66,12 +62,14 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
     loadHistory();
   }, [currentChatId]);
 
-  // Initialize session and user
+
+
+  // Initialize session and user — runs ONCE
   useEffect(() => {
     const sid = getSessionId();
     setSessionId(sid);
 
-    // Check if user is logged in
+    // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser({
@@ -83,7 +81,7 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
       }
     });
 
-    // Listen for auth changes
+    // Listen for auth changes — subscribe ONCE
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
@@ -95,19 +93,14 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
           };
           setUser(newUser);
 
-          // Sync anonymous session
+          // Sync anonymous session with authenticated user
           await fetch('/api/auth/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ session_id: sid, user_id: session.user.id }),
           });
 
-          // Show pending products after login
-          if (pendingProducts.length > 0) {
-            setShowLoginWall(false);
-            setVisibleProducts(pendingProducts);
-            setPendingProducts([]);
-          }
+
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
         }
@@ -115,7 +108,8 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
     );
 
     return () => subscription.unsubscribe();
-  }, [pendingProducts, supabase.auth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps — runs ONCE on mount
 
   // Memoize transport to avoid re-creating on every render
   const transport = React.useMemo(() => {
@@ -147,8 +141,35 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
       textareaRef.current.style.height = 'auto';
     }
 
+    // If no chatId yet AND user is logged in, create one before sending the first message
+    // If user is anonymous, we do NOT create a chatId, keeping the conversation ephemeral
+    if (!currentChatId && sessionId && user) {
+      try {
+        const res = await fetch('/api/chat/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            sessionId, 
+            title: text.slice(0, 100),
+            userId: user.id
+          }),
+        });
+        const data = await res.json();
+        if (data.chatId) {
+          onChatCreated?.(data.chatId);
+          // Wait for state to update so transport gets the new chatId
+          setTimeout(() => {
+            sendMessage({ text });
+          }, 50);
+          return;
+        }
+      } catch (err) {
+        console.error('Error creating chat:', err);
+      }
+    }
+
     sendMessage({ text });
-  }, [inputValue, isLoading, sendMessage]);
+  }, [inputValue, isLoading, sendMessage, currentChatId, sessionId, user, onChatCreated]);
 
   const handleSuggestion = useCallback((text: string) => {
     setInputValue(text);
@@ -173,74 +194,16 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
   }, []);
 
-  const handleSearchProducts = useCallback(async (args: { query: string }) => {
-    try {
-      const res = await fetch('/api/tools', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'search', query: args.query }),
-      });
-      const data = await res.json();
-      if (data.results && data.results.length > 0) {
-        setPendingProducts(data.results);
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-    }
-  }, []);
 
-  const handleShowProducts = useCallback(async (resourceIds: string[]) => {
-    try {
-      const res = await fetch('/api/tools', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'get_by_ids', resourceIds }),
-      });
-      const data = await res.json();
-      if (data.results) {
-        setVisibleProducts(data.results);
-      }
-    } catch (error) {
-      console.error('Show products error:', error);
-    }
-  }, []);
+
+
 
   // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, showLoginWall, visibleProducts]);
+  }, [messages]);
 
-  useEffect(() => {
-    for (const msg of messages) {
-      if (msg.role === 'assistant' && msg.parts) {
-        for (const part of msg.parts) {
-          // Check for any tool invocation part (static or dynamic)
-          const isToolCall = (part.type as string).startsWith('tool-') || part.type === 'tool-invocation';
-          if (isToolCall) {
-            // Using 'any' cast because the exact shape of tool calls is internal to AI SDK v6
-            const toolCall = part as any;
-            const toolName = toolCall.toolName || (part.type as string).replace('tool-', '');
-            // In AI SDK v6, UI tool invocations store arguments in 'input', not 'args'
-            const args = toolCall.args || toolCall.input;
-            
-            if (toolName === 'search_products' && args) {
-              handleSearchProducts(args as { query: string });
-            }
-            if (toolName === 'require_login' && !user && args) {
-              const reqArgs = args as { message: string; productCount: number };
-              setLoginWallMessage(reqArgs.message);
-              setLoginWallCount(reqArgs.productCount);
-              setShowLoginWall(true);
-            }
-            if (toolName === 'show_product_cards' && args) {
-              const showArgs = args as { resourceIds: string[] };
-              handleShowProducts(showArgs.resourceIds);
-            }
-          }
-        }
-      }
-    }
-  }, [messages, user, handleSearchProducts, handleShowProducts]);
+
 
   const hasMessages = messages.length > 0;
 
@@ -267,76 +230,92 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
             <div className="welcome-screen">
               <div className="welcome-icon">🏗️</div>
               <h1 className="welcome-title">
-                Asistente Experto en<br />Activos AEC
+                Tu Asistente de<br />Recursos AEC
               </h1>
               <p className="welcome-subtitle">
-                Tu consultor especializado en recursos BIM para Revit. 
-                Cuéntame sobre tu proyecto y te ayudaré a encontrar las familias, 
-                plantillas y recursos perfectos.
+                Tu aliado para encontrar el recurso exacto que necesitas en tus proyectos 
+                de arquitectura, ingeniería y construcción. Familias, bloques, texturas, 
+                cursos y más — solo cuéntame qué necesitas.
               </p>
               <div className="welcome-suggestions">
                 <button
                   className="suggestion-chip"
-                  onClick={() => handleSuggestion('Necesito familias de equipamiento para un gimnasio')}
+                  onClick={() => handleSuggestion('Busco familias para Revit')}
                 >
-                  🏋️ Equipamiento de gimnasio
+                  🏠 Familias Revit
                 </button>
                 <button
                   className="suggestion-chip"
-                  onClick={() => handleSuggestion('Busco patrones de pisos de madera para un proyecto residencial')}
+                  onClick={() => handleSuggestion('Necesito bloques para AutoCAD')}
                 >
-                  🪵 Patrones de madera
+                  📐 Bloques CAD
                 </button>
                 <button
                   className="suggestion-chip"
-                  onClick={() => handleSuggestion('Necesito bloques de título profesionales para mis planos')}
+                  onClick={() => handleSuggestion('Busco texturas y materiales para renders')}
                 >
-                  📐 Bloques de título
+                  🎨 Texturas y Materiales
                 </button>
                 <button
                   className="suggestion-chip"
-                  onClick={() => handleSuggestion('Estoy diseñando un parque infantil y necesito juegos')}
+                  onClick={() => handleSuggestion('Necesito assets 3D para mis proyectos')}
                 >
-                  🎡 Juegos infantiles
+                  🌳 Assets 3D
                 </button>
                 <button
                   className="suggestion-chip"
-                  onClick={() => handleSuggestion('Busco mobiliario para un spa y centro wellness')}
+                  onClick={() => handleSuggestion('Quiero aprender con cursos de BIM y renders')}
                 >
-                  🧖 Spa y Wellness
+                  📚 Cursos y Tutoriales
+                </button>
+                <button
+                  className="suggestion-chip"
+                  onClick={() => handleSuggestion('Busco escenas o plantillas para D5 Render o SketchUp')}
+                >
+                  🖼️ Escenas y Templates
                 </button>
               </div>
             </div>
           )}
 
-          {messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              role={message.role}
-              content={getMessageText(message)}
-              user={user}
-            />
-          ))}
+          {messages.map((message) => {
+            const textContent = getMessageText(message);
+            
+            // Check if this assistant message has search_products results
+            let searchResults: any[] | null = null;
+            if (message.role === 'assistant' && message.parts) {
+              for (const part of message.parts) {
+                const p = part as any;
+                if (p.type === 'tool-search_products' && p.state === 'output-available' && p.output?.results?.length > 0) {
+                  searchResults = p.output.results;
+                }
+              }
+            }
 
-          {showLoginWall && !user && (
-            <LoginWall
-              message={loginWallMessage}
-              productCount={loginWallCount}
-              onLogin={handleGoogleLogin}
-            />
-          )}
-
-          {visibleProducts.length > 0 && (
-            <div className="product-cards-grid">
-              {visibleProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  userRole={user ? 'free' : undefined}
-                />
-              ))}
-            </div>
-          )}
+            return (
+              <React.Fragment key={message.id}>
+                {textContent && (
+                  <MessageBubble
+                    role={message.role}
+                    content={textContent}
+                    user={user}
+                  />
+                )}
+                {searchResults && (
+                  <div className="product-cards-grid">
+                    {searchResults.map((product: any) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        userRole={user ? 'free' : null}
+                        onRequireLogin={handleGoogleLogin}
+                      />
+                    ))}
+                  </div>
+                )}
+              </React.Fragment>
+            );
+          })}
 
           {isLoading && (
             <div className="message">
@@ -357,35 +336,49 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
 
       <div className="chat-input-area">
         <div className="chat-input-wrapper">
-          <form onSubmit={handleSubmit}>
-            <div className="chat-input-container">
-              <textarea
-                ref={textareaRef}
-                className="chat-input"
-                value={inputValue}
-                onChange={handleTextareaInput}
-                placeholder="Describe tu proyecto o lo que necesitas..."
-                rows={1}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit();
-                  }
-                }}
-              />
-              <button
-                type="submit"
-                className="chat-send-btn"
-                disabled={isLoading || !inputValue.trim()}
-                aria-label="Enviar mensaje"
+          {(!user && messages.filter(m => m.role === 'user').length >= 15) ? (
+            <div className="login-prompt-container" style={{ textAlign: 'center', padding: '1rem', background: 'rgba(255,166,0,0.1)', borderRadius: '12px', border: '1px solid rgba(255,166,0,0.3)', marginBottom: '1rem' }}>
+              <p style={{ color: '#ffa600', marginBottom: '1rem', fontWeight: 500 }}>
+                Has alcanzado el límite del asesor gratuito. Inicia sesión en 1 clic para continuar tu proyecto y guardar el historial.
+              </p>
+              <button 
+                onClick={handleGoogleLogin}
+                style={{ background: '#ffa600', color: '#000', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 2L11 13" />
-                  <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-                </svg>
+                Continuar con Google
               </button>
             </div>
-          </form>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <div className="chat-input-container">
+                <textarea
+                  ref={textareaRef}
+                  className="chat-input"
+                  value={inputValue}
+                  onChange={handleTextareaInput}
+                  placeholder="Describe tu proyecto o lo que necesitas..."
+                  rows={1}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit();
+                    }
+                  }}
+                />
+                <button
+                  type="submit"
+                  className="chat-send-btn"
+                  disabled={isLoading || !inputValue.trim()}
+                  aria-label="Enviar mensaje"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 2L11 13" />
+                    <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+                  </svg>
+                </button>
+              </div>
+            </form>
+          )}
           <p className="chat-disclaimer">
             El asistente puede cometer errores. Verifica los detalles técnicos.
           </p>

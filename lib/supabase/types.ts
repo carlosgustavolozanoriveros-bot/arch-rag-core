@@ -62,6 +62,7 @@ export interface Message {
 export interface MatchedResource {
   id: string;
   nombre_ui: string;
+  nombre_archivo: string | null;
   chunk_semantico: string;
   tipo_recurso: string;
   categoria: string;
