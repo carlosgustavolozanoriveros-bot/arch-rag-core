@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { generatePaymentReference, generateIntegrityHash, PRICING, toCents } from '@/lib/wompi';
 
 /**
  * POST /api/checkout
  * 
  * Creates a pending purchase record and returns Wompi widget configuration.
+ * Uses server-side auth session — no userId needed from client.
  * 
- * Body: { resourceId?: string, purchaseType: 'single' | 'subscription', userId: string }
+ * Body: { resourceId?: string, purchaseType: 'single' | 'subscription' }
  */
 export async function POST(req: NextRequest) {
   try {
-    const { resourceId, purchaseType, userId } = await req.json();
+    const { resourceId, purchaseType } = await req.json();
 
-    if (!purchaseType || !userId) {
+    if (!purchaseType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -21,18 +22,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'resourceId required for single purchase' }, { status: 400 });
     }
 
-    const supabase = createServiceRoleClient();
+    // Get user from server-side session (secure)
+    const authClient = await createServerSupabaseClient();
+    const { data: { session } } = await authClient.auth.getSession();
 
-    // Verify user exists
-    const { data: user, error: userError } = await supabase
-      .from('user_profiles')
-      .select('id, email')
-      .eq('id', userId)
-      .single();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 });
     }
+
+    const userId = session.user.id;
+    const userEmail = session.user.email;
+    const supabase = createServiceRoleClient();
 
     // Check if already purchased (single only)
     if (purchaseType === 'single' && resourceId) {
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
       currency: PRICING.CURRENCY,
       publicKey: process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY,
       integrityHash,
-      customerEmail: user.email,
+      customerEmail: userEmail,
       purchaseType,
     });
   } catch (error) {
