@@ -198,10 +198,20 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     }
   }, [userId, onRequireLogin]);
 
+  // Trigger download without opening a new tab
+  const triggerDownload = useCallback((resourceId: string) => {
+    const link = document.createElement('a');
+    link.href = `/api/download/${resourceId}`;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, []);
+
   // Handle download
   const handleDownload = useCallback(() => {
-    window.open(`/api/download/${product.id}`, '_blank');
-  }, [product.id]);
+    triggerDownload(product.id);
+  }, [product.id, triggerDownload]);
 
   // Checkout callbacks
   const handleCheckoutSuccess = useCallback(() => {
@@ -210,9 +220,9 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     setCheckoutData(null);
     // Auto-start download after successful payment
     setTimeout(() => {
-      window.open(`/api/download/${product.id}`, '_blank');
+      triggerDownload(product.id);
     }, 500);
-  }, [product.id]);
+  }, [product.id, triggerDownload]);
 
   const handleCheckoutError = useCallback((error: string) => {
     console.error('Payment error:', error);
