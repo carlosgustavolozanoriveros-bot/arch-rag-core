@@ -70,8 +70,15 @@ export async function GET(
         if (error) console.error('Download log error:', error);
       });
 
-    // Redirect to Google Drive download URL
-    return NextResponse.redirect(resource.url_accion, 302);
+    // Build direct download URL (bypasses Google Drive virus scan warning)
+    let downloadUrl = resource.url_accion;
+    const fileIdMatch = downloadUrl.match(/(?:[?&]id=|\/d\/|\/file\/d\/)([a-zA-Z0-9_-]+)/);
+    if (fileIdMatch?.[1]) {
+      downloadUrl = `https://drive.google.com/uc?export=download&id=${fileIdMatch[1]}&confirm=t`;
+    }
+
+    // Redirect to direct download
+    return NextResponse.redirect(downloadUrl, 302);
   } catch (error) {
     console.error('Download error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
