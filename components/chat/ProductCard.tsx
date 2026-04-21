@@ -116,6 +116,39 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         setHasPurchased(true);
         setCardState('purchased');
       }
+      // Check if there's a pending purchase intent for THIS product (after login redirect)
+      const intentStr = localStorage.getItem('aec_purchase_intent');
+      if (intentStr) {
+        try {
+          const intent = JSON.parse(intentStr);
+          // Only auto-trigger if intent is for this product and less than 5 min old
+          if (intent.productId === product.id && Date.now() - intent.timestamp < 300000) {
+            localStorage.removeItem('aec_purchase_intent');
+            // Small delay to let UI settle, then auto-trigger checkout
+            setTimeout(async () => {
+              try {
+                const res = await fetch('/api/checkout', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    resourceId: intent.purchaseType === 'single' ? product.id : undefined,
+                    purchaseType: intent.purchaseType,
+                  }),
+                });
+                const data = await res.json();
+                if (res.ok) {
+                  setCheckoutData(data);
+                  setCardState('checkout');
+                }
+              } catch (e) {
+                console.error('Auto-checkout error:', e);
+              }
+            }, 800);
+          }
+        } catch (e) {
+          localStorage.removeItem('aec_purchase_intent');
+        }
+      }
     }
 
     checkAccess();
@@ -124,6 +157,12 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
   // Handle individual purchase
   const handleBuy = useCallback(async () => {
     if (!userId) {
+      // Save purchase intent so it auto-triggers after login
+      localStorage.setItem('aec_purchase_intent', JSON.stringify({
+        productId: product.id,
+        purchaseType: 'single',
+        timestamp: Date.now(),
+      }));
       onRequireLogin?.();
       return;
     }
@@ -166,6 +205,12 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
   // Handle subscription purchase
   const handleSubscribe = useCallback(async () => {
     if (!userId) {
+      // Save purchase intent so it auto-triggers after login
+      localStorage.setItem('aec_purchase_intent', JSON.stringify({
+        productId: product.id,
+        purchaseType: 'subscription',
+        timestamp: Date.now(),
+      }));
       onRequireLogin?.();
       return;
     }
