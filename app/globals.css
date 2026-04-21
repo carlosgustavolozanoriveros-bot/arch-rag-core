@@ -855,3 +855,206 @@ body {
     align-items: center;
   }
 }
+
+/* ---- Download Button ---- */
+.product-card-download-btn {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 8px 4px;
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  background: var(--accent-green);
+  color: #0a0a0f;
+  letter-spacing: 0.3px;
+}
+
+.product-card-download-btn:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 14px rgba(78, 203, 113, 0.35);
+}
+
+/* ---- PRO Badge on Product Card ---- */
+.product-card-badge-pro {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--gradient-gold);
+  color: #0a0a0f;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: var(--shadow-sm);
+}
+
+.product-card-thumb {
+  position: relative;
+}
+
+/* ---- PRO Badge in Header ---- */
+.header-pro-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--gradient-gold);
+  color: #0a0a0f;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ---- Wompi Checkout Modal ---- */
+.wompi-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: overlayFadeIn 0.25s ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.wompi-modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  width: 90%;
+  max-width: 420px;
+  padding: 0;
+  box-shadow: var(--shadow-lg);
+  animation: modalSlideIn 0.3s ease-out;
+  overflow: hidden;
+}
+
+@keyframes modalSlideIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.wompi-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.wompi-modal-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.wompi-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.wompi-close-btn:hover {
+  background: var(--accent-red);
+  color: white;
+  border-color: var(--accent-red);
+}
+
+.wompi-summary {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wompi-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.wompi-summary-row.wompi-total {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.wompi-recurring-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  padding: 8px 12px;
+  background: rgba(200, 169, 126, 0.08);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--accent-gold);
+}
+
+.wompi-form {
+  padding: 16px 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.wompi-fallback {
+  padding: 0 24px 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.wompi-fallback-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px 24px;
+  background: var(--gradient-gold);
+  color: #0a0a0f;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.wompi-fallback-btn:hover {
+  transform: scale(1.02);
+  box-shadow: var(--shadow-glow);
+}
+
+.wompi-security {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 12px 24px 20px;
+}

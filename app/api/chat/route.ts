@@ -8,7 +8,7 @@ export const maxDuration = 60;
 
 export async function POST(req: Request) {
   const { messages, sessionId, chatId, isAuthenticated } = await req.json();
-  
+
   // Normalize messages for AI SDK v6 schema compatibility
   const modelMessages = await convertToModelMessages(messages);
 
