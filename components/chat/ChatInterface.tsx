@@ -123,10 +123,14 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
     });
   }, [sessionId, currentChatId, user]);
 
+  // Use a unique key that changes when chat switches AND history finishes loading
+  // This forces useChat to fully re-initialize with the correct initialMessages
+  const chatKey = `${currentChatId || 'new'}-${isInitializing ? 'loading' : 'ready'}`;
+
   const { messages, sendMessage, status } = useChat({
     transport,
     messages: initialMessages,
-    id: currentChatId || 'new', // Forces hook to reset when id changes
+    id: chatKey,
   });
 
   const isLoading = status === 'streaming' || status === 'submitted';
