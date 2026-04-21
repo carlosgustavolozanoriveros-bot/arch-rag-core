@@ -85,8 +85,19 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
       setUserId(session.user.id);
 
-      // Check if subscriber
-      if (userRole === 'subscriber' || userRole === 'admin') {
+      // Fetch actual role from DB (not from potentially stale prop)
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role, subscription_expires_at')
+        .eq('id', session.user.id)
+        .single();
+
+      const isSubscriber = profile && (
+        profile.role === 'admin' || 
+        (profile.role === 'subscriber' && profile.subscription_expires_at && new Date(profile.subscription_expires_at) > new Date())
+      );
+
+      if (isSubscriber) {
         setCardState('subscriber');
         return;
       }
