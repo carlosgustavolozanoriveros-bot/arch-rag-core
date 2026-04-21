@@ -16,7 +16,7 @@ export function ChatContainer() {
     if (savedChatId) {
       setCurrentChatIdState(savedChatId);
     }
-    
+
     // Auto collapse sidebar on mobile
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
@@ -46,9 +46,9 @@ export function ChatContainer() {
   return (
     <div style={{ display: 'flex', width: '100%', height: '100%' }}>
       {/* Sidebar Area */}
-      <Sidebar 
-        currentChatId={currentChatId} 
-        onSelectChat={handleSelectChat} 
+      <Sidebar
+        currentChatId={currentChatId}
+        onSelectChat={handleSelectChat}
         onNewChat={handleNewChat}
         isOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
@@ -57,8 +57,8 @@ export function ChatContainer() {
       {/* Main Chat Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
         <Header toggleSidebar={toggleSidebar} />
-        <ChatInterface 
-          currentChatId={currentChatId} 
+        <ChatInterface
+          currentChatId={currentChatId}
           onChatCreated={handleSelectChat}
         />
       </div>

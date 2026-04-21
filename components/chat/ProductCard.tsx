@@ -197,7 +197,11 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     setCardState('purchased');
     setHasPurchased(true);
     setCheckoutData(null);
-  }, []);
+    // Auto-start download after successful payment
+    setTimeout(() => {
+      window.open(`/api/download/${product.id}`, '_blank');
+    }, 500);
+  }, [product.id]);
 
   const handleCheckoutError = useCallback((error: string) => {
     console.error('Payment error:', error);
