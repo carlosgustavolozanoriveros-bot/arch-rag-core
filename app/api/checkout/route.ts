@@ -22,16 +22,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'resourceId required for single purchase' }, { status: 400 });
     }
 
-    // Get user from server-side session (secure)
+    // Get user from server-side auth (secure)
     const authClient = await createServerSupabaseClient();
-    const { data: { session } } = await authClient.auth.getSession();
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
 
-    if (!session?.user) {
+    if (authError || !user) {
       return NextResponse.json({ error: 'Debes iniciar sesión' }, { status: 401 });
     }
 
-    const userId = session.user.id;
-    const userEmail = session.user.email;
+    const userId = user.id;
+    const userEmail = user.email;
     const supabase = createServiceRoleClient();
 
     // Check if already purchased (single only)

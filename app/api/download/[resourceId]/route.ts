@@ -20,16 +20,16 @@ export async function GET(
 
     // Get authenticated user
     const supabase = await createServerSupabaseClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (!session?.user) {
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Debes iniciar sesión para descargar', requireLogin: true },
         { status: 401 }
       );
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
     const serviceClient = createServiceRoleClient();
 
     // Check access using the DB function
