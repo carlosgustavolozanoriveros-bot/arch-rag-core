@@ -56,31 +56,80 @@ export async function POST(req: Request) {
     tools: activeTools,
     toolChoice: 'auto',
     stopWhen: stepCountIs(5),
-    onFinish: async ({ text, steps }) => {
+    onFinish: async ({ text, steps, toolCalls, toolResults }) => {
       // Save assistant response to DB
-      if (currentChatId && text) {
-        // Extract search results from tool calls for history reconstruction
+      if (currentChatId) {
+        // Extract search results from any available source
         let toolCallsData: any = null;
-        if (steps) {
-          for (const step of steps) {
+
+        // Method 1: Check top-level toolResults
+        if (toolResults && Array.isArray(toolResults)) {
+          for (const tr of toolResults as any[]) {
+            if (tr.toolName === 'search_products' || tr.type === 'search_products') {
+              const results = tr.result?.results || tr.results;
+              if (results?.length > 0) {
+                toolCallsData = { search_results: results };
+              }
+            }
+          }
+        }
+
+        // Method 2: Check top-level toolCalls
+        if (!toolCallsData && toolCalls && Array.isArray(toolCalls)) {
+          for (const tc of toolCalls as any[]) {
+            if (tc.toolName === 'search_products') {
+              const results = tc.result?.results || tc.args?.results;
+              if (results?.length > 0) {
+                toolCallsData = { search_results: results };
+              }
+            }
+          }
+        }
+
+        // Method 3: Check steps
+        if (!toolCallsData && steps) {
+          for (const step of steps as any[]) {
+            // Check step.toolResults
             if (step.toolResults) {
-              for (const tr of step.toolResults as any[]) {
-                if (tr.toolName === 'search_products' && tr.result?.results?.length > 0) {
-                  toolCallsData = {
-                    search_results: tr.result.results
-                  };
+              for (const tr of Array.isArray(step.toolResults) ? step.toolResults : [step.toolResults]) {
+                const r = tr as any;
+                if (r.toolName === 'search_products') {
+                  const results = r.result?.results || r.results;
+                  if (results?.length > 0) {
+                    toolCallsData = { search_results: results };
+                  }
+                }
+              }
+            }
+            // Check step.toolCalls
+            if (!toolCallsData && step.toolCalls) {
+              for (const tc of Array.isArray(step.toolCalls) ? step.toolCalls : [step.toolCalls]) {
+                const t = tc as any;
+                if (t.toolName === 'search_products' && t.result?.results?.length > 0) {
+                  toolCallsData = { search_results: t.result.results };
                 }
               }
             }
           }
         }
 
-        await supabase.from('messages').insert({
-          chat_id: currentChatId,
-          role: 'assistant',
-          content: text,
-          tool_calls: toolCallsData,
-        });
+        // Log for debugging if we still didn't find results
+        if (!toolCallsData) {
+          console.log('[onFinish] No search results found. steps keys:', 
+            steps ? steps.map((s: any) => Object.keys(s)) : 'no steps',
+            'toolCalls:', toolCalls ? JSON.stringify(toolCalls).slice(0, 200) : 'none',
+            'toolResults:', toolResults ? JSON.stringify(toolResults).slice(0, 200) : 'none'
+          );
+        }
+
+        if (text || toolCallsData) {
+          await supabase.from('messages').insert({
+            chat_id: currentChatId,
+            role: 'assistant',
+            content: text || '',
+            tool_calls: toolCallsData,
+          });
+        }
       }
     },
   });
