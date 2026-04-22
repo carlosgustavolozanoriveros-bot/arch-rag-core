@@ -56,13 +56,30 @@ export async function POST(req: Request) {
     tools: activeTools,
     toolChoice: 'auto',
     stopWhen: stepCountIs(5),
-    onFinish: async ({ text }) => {
+    onFinish: async ({ text, steps }) => {
       // Save assistant response to DB
       if (currentChatId && text) {
+        // Extract search results from tool calls for history reconstruction
+        let toolCallsData: any = null;
+        if (steps) {
+          for (const step of steps) {
+            if (step.toolResults) {
+              for (const result of step.toolResults) {
+                if (result.toolName === 'search_products' && result.result?.results?.length > 0) {
+                  toolCallsData = {
+                    search_results: result.result.results
+                  };
+                }
+              }
+            }
+          }
+        }
+
         await supabase.from('messages').insert({
           chat_id: currentChatId,
           role: 'assistant',
           content: text,
+          tool_calls: toolCallsData,
         });
       }
     },

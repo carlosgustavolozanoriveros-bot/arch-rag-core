@@ -80,15 +80,21 @@ export function Sidebar({ currentChatId, isOpen, toggleSidebar, onSelectChat, on
   };
 
   const handleDelete = async (chatId: string) => {
-    const supabase = createClient();
-    // Delete messages first, then chat
-    await supabase.from('messages').delete().eq('chat_id', chatId);
-    await supabase.from('chats').delete().eq('id', chatId);
-    setChats(prev => prev.filter(c => c.id !== chatId));
-    setMenuOpenId(null);
-    // If deleting current chat, go to new chat
-    if (currentChatId === chatId) {
-      onNewChat();
+    try {
+      const res = await fetch('/api/chat/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId }),
+      });
+      if (res.ok) {
+        setChats(prev => prev.filter(c => c.id !== chatId));
+        setMenuOpenId(null);
+        if (currentChatId === chatId) {
+          onNewChat();
+        }
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
     }
   };
 

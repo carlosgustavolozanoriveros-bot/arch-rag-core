@@ -12,10 +12,10 @@ export async function GET(req: Request) {
 
     const supabase = createServiceRoleClient();
     
-    // Fetch messages for the given chat ID
+    // Fetch messages for the given chat ID (include tool_calls)
     const { data: messages, error } = await supabase
       .from('messages')
-      .select('id, role, content, created_at')
+      .select('id, role, content, tool_calls, created_at')
       .eq('chat_id', chatId)
       .order('created_at', { ascending: true })
       .limit(100);
@@ -26,13 +26,26 @@ export async function GET(req: Request) {
     }
 
     // Format for AI SDK's UIMessage (must include 'parts' for useChat compatibility)
-    const formattedMessages = messages.map((msg: any) => ({
-      id: msg.id,
-      role: msg.role as 'user' | 'assistant' | 'system' | 'data',
-      content: msg.content,
-      parts: [{ type: 'text', text: msg.content }],
-      createdAt: new Date(msg.created_at)
-    }));
+    const formattedMessages = messages.map((msg: any) => {
+      const parts: any[] = [{ type: 'text', text: msg.content }];
+
+      // Reconstruct tool parts for assistant messages with search results
+      if (msg.role === 'assistant' && msg.tool_calls?.search_results) {
+        parts.push({
+          type: 'tool-search_products',
+          state: 'output-available',
+          output: { results: msg.tool_calls.search_results },
+        });
+      }
+
+      return {
+        id: msg.id,
+        role: msg.role as 'user' | 'assistant' | 'system' | 'data',
+        content: msg.content,
+        parts,
+        createdAt: new Date(msg.created_at)
+      };
+    });
 
     return NextResponse.json({ messages: formattedMessages });
   } catch (error) {
