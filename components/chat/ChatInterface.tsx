@@ -88,9 +88,9 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
     }
   }, [currentChatId, sendMessage]);
 
-  // Restore saved conversation after OAuth login redirect
+  // Restore saved conversation after OAuth login redirect + save to DB
   useEffect(() => {
-    if (!user) return;
+    if (!user || !sessionId) return;
     const saved = localStorage.getItem('aec_chat_before_login');
     if (!saved) return;
 
@@ -99,11 +99,63 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
       localStorage.removeItem('aec_chat_before_login');
       if (savedMessages.length > 0 && messages.length === 0) {
         setMessages(savedMessages);
+
+        // Auto-save the restored conversation to DB
+        (async () => {
+          try {
+            // Get first user message as title
+            const firstUserMsg = savedMessages.find((m: any) => m.role === 'user');
+            const title = firstUserMsg 
+              ? (firstUserMsg.parts?.[0]?.text || firstUserMsg.content || '').slice(0, 100) 
+              : 'Conversación restaurada';
+
+            // Create chat in DB
+            const res = await fetch('/api/chat/create', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionId, title, userId: user.id }),
+            });
+            const data = await res.json();
+            if (!data.chatId) return;
+
+            // Save all messages to DB
+            for (const msg of savedMessages) {
+              const content = msg.parts?.[0]?.text || msg.content || '';
+              if (!content) continue;
+
+              // Build tool_calls data if this message has search results
+              let toolCalls = null;
+              if (msg.role === 'assistant' && msg.parts) {
+                for (const part of msg.parts) {
+                  if (part.type === 'tool-search_products' && part.output?.results?.length > 0) {
+                    toolCalls = { search_results: part.output.results };
+                  }
+                }
+              }
+
+              await fetch('/api/chat/history/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chatId: data.chatId,
+                  role: msg.role,
+                  content,
+                  toolCalls,
+                }),
+              });
+            }
+
+            // Update the UI to reflect the new chat
+            onChatCreated?.(data.chatId);
+          } catch (err) {
+            console.error('Failed to save restored chat:', err);
+          }
+        })();
       }
     } catch (e) {
       localStorage.removeItem('aec_chat_before_login');
     }
-  }, [user, setMessages]);
+  }, [user, sessionId, setMessages]);
 
   // Initialize session and user — runs ONCE
   useEffect(() => {
