@@ -1,7 +1,8 @@
-import { streamText, convertToModelMessages, stepCountIs } from 'ai';
+import { streamText, convertToModelMessages, stepCountIs, tool } from 'ai';
+import { z } from 'zod';
 import { google } from '@ai-sdk/google';
 import { SYSTEM_PROMPT } from '@/lib/ai/system-prompt';
-import { tools } from '@/lib/ai/tools';
+import { searchResources } from '@/lib/rag';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export const maxDuration = 60;
@@ -45,7 +46,36 @@ export async function POST(req: Request) {
     ? dbMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
     : messages;
 
-  const activeTools = { search_products: tools.search_products };
+  // Capture search results via closure — the tool writes here, onFinish reads
+  let capturedSearchResults: any[] | null = null;
+
+  // Inline tool with result capture
+  const searchProductsTool = tool({
+    description: 'Busca recursos AEC en el catálogo por similitud semántica. Usa esta herramienta cuando el usuario describe lo que necesita para su proyecto. NOTA CRÍTICA: El sistema mostrará las visualizaciones de las tarjetas automáticamente. NO incluyas listas manuales, viñetas, descripciones ni precios de los productos en tu respuesta de texto. Solo da un breve mensaje entusiasta de que encontraste opciones.',
+    parameters: z.object({
+      query: z.string().describe('La consulta de búsqueda en lenguaje natural'),
+    }),
+    execute: async ({ query }) => {
+      try {
+        const results = await searchResources(query, 0.30, 5);
+        if (results.length === 0) {
+          return { found: false, message: 'No se encontraron recursos para esa búsqueda.', results: [] };
+        }
+        // Capture results for DB persistence
+        capturedSearchResults = results;
+        return {
+          found: true,
+          message: `Se encontraron ${results.length} recursos relevantes.`,
+          results: results,
+        };
+      } catch (error) {
+        console.error('Search products error:', error);
+        return { found: false, message: 'Error al buscar productos.', results: [] };
+      }
+    },
+  });
+
+  const activeTools = { search_products: searchProductsTool };
 
   const dynamicSystemPrompt = `${SYSTEM_PROMPT}`;
 
@@ -56,39 +86,16 @@ export async function POST(req: Request) {
     tools: activeTools,
     toolChoice: 'auto',
     stopWhen: stepCountIs(5),
-    onFinish: async ({ text, steps }) => {
-      if (currentChatId) {
-        let toolCallsData: any = null;
-
-        // In AI SDK v4, tool results live in step.content as content parts
-        if (steps) {
-          for (const step of steps as any[]) {
-            if (step.content && Array.isArray(step.content)) {
-              // Log content types for debugging
-              const contentTypes = step.content.map((p: any) => ({ type: p.type, toolName: p.toolName, hasResult: !!p.result }));
-              console.log('[onFinish] step.content parts:', JSON.stringify(contentTypes));
-              
-              for (const part of step.content) {
-                if (part.type === 'tool-result' && part.toolName === 'search_products') {
-                  const results = part.result?.results;
-                  if (results?.length > 0) {
-                    toolCallsData = { search_results: results };
-                    console.log('[onFinish] Found search results:', results.length, 'items');
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        if (text || toolCallsData) {
-          await supabase.from('messages').insert({
-            chat_id: currentChatId,
-            role: 'assistant',
-            content: text || '',
-            tool_calls: toolCallsData,
-          });
-        }
+    onFinish: async ({ text }) => {
+      if (currentChatId && (text || capturedSearchResults)) {
+        await supabase.from('messages').insert({
+          chat_id: currentChatId,
+          role: 'assistant',
+          content: text || '',
+          tool_calls: capturedSearchResults
+            ? { search_results: capturedSearchResults }
+            : null,
+        });
       }
     },
   });
@@ -98,5 +105,3 @@ export async function POST(req: Request) {
     headers: currentChatId ? { 'X-Chat-Id': currentChatId } : undefined,
   });
 }
-
-
