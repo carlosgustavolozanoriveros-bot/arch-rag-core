@@ -100,16 +100,14 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
       if (savedMessages.length > 0 && messages.length === 0) {
         setMessages(savedMessages);
 
-        // Auto-save the restored conversation to DB
+        // Save to DB in background — delay onChatCreated so purchase intent flow can complete
         (async () => {
           try {
-            // Get first user message as title
             const firstUserMsg = savedMessages.find((m: any) => m.role === 'user');
             const title = firstUserMsg 
               ? (firstUserMsg.parts?.[0]?.text || firstUserMsg.content || '').slice(0, 100) 
               : 'Conversación restaurada';
 
-            // Create chat in DB
             const res = await fetch('/api/chat/create', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -123,12 +121,16 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
               const content = msg.parts?.[0]?.text || msg.content || '';
               if (!content) continue;
 
-              // Build tool_calls data if this message has search results
+              // Extract search results from tool parts (check multiple formats)
               let toolCalls = null;
               if (msg.role === 'assistant' && msg.parts) {
-                for (const part of msg.parts) {
-                  if (part.type === 'tool-search_products' && part.output?.results?.length > 0) {
-                    toolCalls = { search_results: part.output.results };
+                for (const part of msg.parts as any[]) {
+                  const results = part.output?.results || part.result?.results;
+                  if (
+                    (part.type === 'tool-search_products' || part.toolName === 'search_products') &&
+                    results?.length > 0
+                  ) {
+                    toolCalls = { search_results: results };
                   }
                 }
               }
@@ -145,8 +147,11 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
               });
             }
 
-            // Update the UI to reflect the new chat
-            onChatCreated?.(data.chatId);
+            // Delay onChatCreated so purchase intent modal has time to open
+            // (onChatCreated triggers history reload which would clear restored messages)
+            setTimeout(() => {
+              onChatCreated?.(data.chatId);
+            }, 5000);
           } catch (err) {
             console.error('Failed to save restored chat:', err);
           }
