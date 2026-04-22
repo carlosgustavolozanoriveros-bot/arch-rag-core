@@ -52,10 +52,10 @@ export async function POST(req: Request) {
   // Inline tool with result capture
   const searchProductsTool = tool({
     description: 'Busca recursos AEC en el catálogo por similitud semántica. Usa esta herramienta cuando el usuario describe lo que necesita para su proyecto. NOTA CRÍTICA: El sistema mostrará las visualizaciones de las tarjetas automáticamente. NO incluyas listas manuales, viñetas, descripciones ni precios de los productos en tu respuesta de texto. Solo da un breve mensaje entusiasta de que encontraste opciones.',
-    parameters: z.object({
+    inputSchema: z.object({
       query: z.string().describe('La consulta de búsqueda en lenguaje natural'),
     }),
-    execute: async ({ query }) => {
+    execute: async ({ query }: { query: string }) => {
       try {
         const results = await searchResources(query, 0.30, 5);
         if (results.length === 0) {
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
         return { found: false, message: 'Error al buscar productos.', results: [] };
       }
     },
-  });
+  } as any);
 
   const activeTools = { search_products: searchProductsTool };
 
