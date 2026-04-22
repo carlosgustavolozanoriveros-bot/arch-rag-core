@@ -64,10 +64,10 @@ export async function POST(req: Request) {
         if (steps) {
           for (const step of steps) {
             if (step.toolResults) {
-              for (const result of step.toolResults) {
-                if (result.toolName === 'search_products' && result.result?.results?.length > 0) {
+              for (const tr of step.toolResults as any[]) {
+                if (tr.toolName === 'search_products' && tr.result?.results?.length > 0) {
                   toolCallsData = {
-                    search_results: result.result.results
+                    search_results: tr.result.results
                   };
                 }
               }
