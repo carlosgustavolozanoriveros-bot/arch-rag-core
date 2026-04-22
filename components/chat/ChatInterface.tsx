@@ -138,8 +138,16 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
 
             // Save all messages to DB
             for (const msg of savedMessages) {
-              const content = msg.parts?.[0]?.text || msg.content || '';
-              if (!content) continue;
+              // Find text content from any text part (not just parts[0])
+              let content = msg.content || '';
+              if (!content && msg.parts) {
+                for (const part of msg.parts as any[]) {
+                  if (part.type === 'text' && part.text) {
+                    content = part.text;
+                    break;
+                  }
+                }
+              }
 
               // Extract search results from tool parts (check multiple formats)
               let toolCalls = null;
