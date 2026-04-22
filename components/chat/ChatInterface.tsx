@@ -32,36 +32,19 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const pendingMessageRef = useRef<string | null>(null);
   const supabase = createClient();
 
-  // Ref for chatId so transport always has the latest value
-  const chatIdRef = useRef<string | null>(currentChatId);
-  useEffect(() => { chatIdRef.current = currentChatId; }, [currentChatId]);
-
-  // Custom transport that reads chatId from ref at send-time (not creation-time)
+  // Standard transport — recreates when currentChatId changes
   const transport = React.useMemo(() => {
-    return {
-      ...new DefaultChatTransport({
-        api: '/api/chat',
-        body: {
-          sessionId,
-          chatId: currentChatId,
-          isAuthenticated: !!user,
-        },
-      }),
-      // Override submitMessages to inject the latest chatId
-      submitMessages: async (messages: any[], options: any = {}) => {
-        const baseTransport = new DefaultChatTransport({
-          api: '/api/chat',
-          body: {
-            sessionId,
-            chatId: chatIdRef.current,
-            isAuthenticated: !!user,
-          },
-        });
-        return baseTransport.submitMessages(messages, options);
+    return new DefaultChatTransport({
+      api: '/api/chat',
+      body: {
+        sessionId,
+        chatId: currentChatId,
+        isAuthenticated: !!user,
       },
-    };
+    });
   }, [sessionId, currentChatId, user]);
 
   // Initialize useChat with stable ID
@@ -94,6 +77,16 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
       })
       .finally(() => setIsLoadingHistory(false));
   }, [currentChatId, setMessages]);
+
+  // Send pending message after transport updates with new chatId
+  useEffect(() => {
+    if (currentChatId && pendingMessageRef.current) {
+      const text = pendingMessageRef.current;
+      pendingMessageRef.current = null;
+      // Small delay to ensure transport is ready
+      setTimeout(() => sendMessage({ text }), 100);
+    }
+  }, [currentChatId, sendMessage]);
 
   // Initialize session and user — runs ONCE
   useEffect(() => {
@@ -153,8 +146,8 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
       textareaRef.current.style.height = 'auto';
     }
 
-    // If no chatId yet AND user is logged in, create one before sending the first message
-    if (!chatIdRef.current && sessionId && user) {
+    // If no chatId yet AND user is logged in, create chat first
+    if (!currentChatId && sessionId && user) {
       try {
         const res = await fetch('/api/chat/create', {
           method: 'POST',
@@ -167,8 +160,10 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
         });
         const data = await res.json();
         if (data.chatId) {
-          chatIdRef.current = data.chatId;
+          // Store message to send after transport updates
+          pendingMessageRef.current = text;
           onChatCreated?.(data.chatId);
+          return; // Don't send now — useEffect will send when chatId propagates
         }
       } catch (err) {
         console.error('Error creating chat:', err);
@@ -176,7 +171,7 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
     }
 
     sendMessage({ text });
-  }, [inputValue, isLoading, sendMessage, sessionId, user, onChatCreated]);
+  }, [inputValue, isLoading, sendMessage, currentChatId, sessionId, user, onChatCreated]);
 
   const handleSuggestion = useCallback((text: string) => {
     setInputValue(text);
