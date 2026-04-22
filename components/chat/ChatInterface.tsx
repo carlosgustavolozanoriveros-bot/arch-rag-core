@@ -29,6 +29,8 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
 
   const [inputValue, setInputValue] = useState('');
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  // Separate state for search results that useChat might strip from parts
+  const [searchResultsMap, setSearchResultsMap] = useState<Record<string, any[]>>({});
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -57,6 +59,7 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
   useEffect(() => {
     if (!currentChatId) {
       setMessages([]);
+      setSearchResultsMap({});
       return;
     }
 
@@ -67,13 +70,30 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
       .then(data => {
         if (data.messages && data.messages.length > 0) {
           setMessages(data.messages);
+          // Extract search results into separate map (in case useChat strips custom parts)
+          const resultsMap: Record<string, any[]> = {};
+          for (const msg of data.messages) {
+            if (msg.role === 'assistant' && msg.parts) {
+              for (const part of msg.parts) {
+                if (part.type === 'tool-search_products') {
+                  const results = part.output?.results || part.result?.results;
+                  if (results?.length > 0) {
+                    resultsMap[msg.id] = results;
+                  }
+                }
+              }
+            }
+          }
+          setSearchResultsMap(resultsMap);
         } else {
           setMessages([]);
+          setSearchResultsMap({});
         }
       })
       .catch(error => {
         console.error('Failed to load history', error);
         setMessages([]);
+        setSearchResultsMap({});
       })
       .finally(() => setIsLoadingHistory(false));
   }, [currentChatId, setMessages]);
@@ -374,10 +394,18 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
             if (message.role === 'assistant' && message.parts) {
               for (const part of message.parts) {
                 const p = part as any;
-                if (p.type === 'tool-search_products' && p.state === 'output-available' && p.output?.results?.length > 0) {
-                  searchResults = p.output.results;
+                // Check multiple formats: streaming (output-available) and history reconstruction
+                if (p.type === 'tool-search_products') {
+                  const results = p.output?.results || p.result?.results;
+                  if (results?.length > 0) {
+                    searchResults = results;
+                  }
                 }
               }
+            }
+            // Fallback: check searchResultsMap (populated from history API, survives useChat parts stripping)
+            if (!searchResults && searchResultsMap[message.id]?.length > 0) {
+              searchResults = searchResultsMap[message.id];
             }
 
             return (
