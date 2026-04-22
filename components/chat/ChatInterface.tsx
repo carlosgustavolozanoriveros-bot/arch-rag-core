@@ -34,16 +34,34 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const supabase = createClient();
 
-  // Memoize transport
+  // Ref for chatId so transport always has the latest value
+  const chatIdRef = useRef<string | null>(currentChatId);
+  useEffect(() => { chatIdRef.current = currentChatId; }, [currentChatId]);
+
+  // Custom transport that reads chatId from ref at send-time (not creation-time)
   const transport = React.useMemo(() => {
-    return new DefaultChatTransport({
-      api: '/api/chat',
-      body: {
-        sessionId,
-        chatId: currentChatId,
-        isAuthenticated: !!user,
+    return {
+      ...new DefaultChatTransport({
+        api: '/api/chat',
+        body: {
+          sessionId,
+          chatId: currentChatId,
+          isAuthenticated: !!user,
+        },
+      }),
+      // Override submitMessages to inject the latest chatId
+      submitMessages: async (messages: any[], options: any = {}) => {
+        const baseTransport = new DefaultChatTransport({
+          api: '/api/chat',
+          body: {
+            sessionId,
+            chatId: chatIdRef.current,
+            isAuthenticated: !!user,
+          },
+        });
+        return baseTransport.submitMessages(messages, options);
       },
-    });
+    };
   }, [sessionId, currentChatId, user]);
 
   // Initialize useChat with stable ID
@@ -136,8 +154,7 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
     }
 
     // If no chatId yet AND user is logged in, create one before sending the first message
-    // If user is anonymous, we do NOT create a chatId, keeping the conversation ephemeral
-    if (!currentChatId && sessionId && user) {
+    if (!chatIdRef.current && sessionId && user) {
       try {
         const res = await fetch('/api/chat/create', {
           method: 'POST',
@@ -150,12 +167,8 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
         });
         const data = await res.json();
         if (data.chatId) {
+          chatIdRef.current = data.chatId;
           onChatCreated?.(data.chatId);
-          // Wait for state to update so transport gets the new chatId
-          setTimeout(() => {
-            sendMessage({ text });
-          }, 50);
-          return;
         }
       } catch (err) {
         console.error('Error creating chat:', err);
@@ -163,7 +176,7 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
     }
 
     sendMessage({ text });
-  }, [inputValue, isLoading, sendMessage, currentChatId, sessionId, user, onChatCreated]);
+  }, [inputValue, isLoading, sendMessage, sessionId, user, onChatCreated]);
 
   const handleSuggestion = useCallback((text: string) => {
     setInputValue(text);
