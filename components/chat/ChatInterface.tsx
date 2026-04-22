@@ -88,6 +88,23 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
     }
   }, [currentChatId, sendMessage]);
 
+  // Restore saved conversation after OAuth login redirect
+  useEffect(() => {
+    if (!user) return;
+    const saved = localStorage.getItem('aec_chat_before_login');
+    if (!saved) return;
+
+    try {
+      const savedMessages = JSON.parse(saved);
+      localStorage.removeItem('aec_chat_before_login');
+      if (savedMessages.length > 0 && messages.length === 0) {
+        setMessages(savedMessages);
+      }
+    } catch (e) {
+      localStorage.removeItem('aec_chat_before_login');
+    }
+  }, [user, setMessages]);
+
   // Initialize session and user — runs ONCE
   useEffect(() => {
     const sid = getSessionId();
@@ -180,13 +197,21 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
   }, []);
 
   const handleGoogleLogin = useCallback(async () => {
+    // Save current conversation before redirect so it can be restored after login
+    if (messages.length > 0) {
+      try {
+        localStorage.setItem('aec_chat_before_login', JSON.stringify(messages));
+      } catch (e) {
+        console.error('Failed to save chat state:', e);
+      }
+    }
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
-  }, [supabase]);
+  }, [supabase, messages]);
 
   // Auto-resize textarea
   const handleTextareaInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
