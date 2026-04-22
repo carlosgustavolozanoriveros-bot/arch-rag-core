@@ -3,7 +3,7 @@
 import { useChat } from '@ai-sdk/react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as React from 'react';
-import { DefaultChatTransport, UIMessage } from 'ai';
+import { DefaultChatTransport } from 'ai';
 import { createClient } from '@/lib/supabase/client';
 import { getSessionId } from '@/lib/session';
 import { MessageBubble } from './MessageBubble';
@@ -28,41 +28,54 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
   const [sessionId, setSessionId] = useState<string>('');
 
   const [inputValue, setInputValue] = useState('');
-  const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const supabase = createClient();
 
-  // Load chat history if currentChatId is present
+  // Memoize transport
+  const transport = React.useMemo(() => {
+    return new DefaultChatTransport({
+      api: '/api/chat',
+      body: {
+        sessionId,
+        chatId: currentChatId,
+        isAuthenticated: !!user,
+      },
+    });
+  }, [sessionId, currentChatId, user]);
+
+  // Initialize useChat with stable ID
+  const { messages, sendMessage, status, setMessages } = useChat({
+    transport,
+    id: currentChatId || 'new',
+  });
+
+  // Load chat history when currentChatId changes
   useEffect(() => {
-    async function loadHistory() {
-      setIsInitializing(true);
-      if (currentChatId) {
-        try {
-          const res = await fetch(`/api/chat/history?chatId=${currentChatId}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.messages && data.messages.length > 0) {
-              setInitialMessages(data.messages);
-            } else {
-              setInitialMessages([]);
-            }
-          }
-        } catch (error) {
-          console.error("Failed to load history", error);
-          setInitialMessages([]);
-        }
-      } else {
-        setInitialMessages([]);
-      }
-      setIsInitializing(false);
+    if (!currentChatId) {
+      setMessages([]);
+      return;
     }
-    loadHistory();
-  }, [currentChatId]);
 
+    setIsLoadingHistory(true);
 
+    fetch(`/api/chat/history?chatId=${currentChatId}`)
+      .then(res => res.ok ? res.json() : { messages: [] })
+      .then(data => {
+        if (data.messages && data.messages.length > 0) {
+          setMessages(data.messages);
+        } else {
+          setMessages([]);
+        }
+      })
+      .catch(error => {
+        console.error('Failed to load history', error);
+        setMessages([]);
+      })
+      .finally(() => setIsLoadingHistory(false));
+  }, [currentChatId, setMessages]);
 
   // Initialize session and user — runs ONCE
   useEffect(() => {
@@ -100,7 +113,6 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
             body: JSON.stringify({ session_id: sid, user_id: session.user.id }),
           });
 
-
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
         }
@@ -110,28 +122,6 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
     return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps — runs ONCE on mount
-
-  // Memoize transport to avoid re-creating on every render
-  const transport = React.useMemo(() => {
-    return new DefaultChatTransport({
-      api: '/api/chat',
-      body: {
-        sessionId,
-        chatId: currentChatId,
-        isAuthenticated: !!user,
-      },
-    });
-  }, [sessionId, currentChatId, user]);
-
-  // Use a unique key that changes when chat switches AND history finishes loading
-  // This forces useChat to fully re-initialize with the correct initialMessages
-  const chatKey = `${currentChatId || 'new'}-${isInitializing ? 'loading' : 'ready'}`;
-
-  const { messages, sendMessage, status } = useChat({
-    transport,
-    messages: initialMessages,
-    id: chatKey,
-  });
 
   const isLoading = status === 'streaming' || status === 'submitted';
 
@@ -226,7 +216,7 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
     <div className="chat-container">
       <div className="chat-messages">
         <div className="chat-messages-inner">
-          {isInitializing ? (
+          {isLoadingHistory ? (
             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
               Cargando conversación...
             </div>
