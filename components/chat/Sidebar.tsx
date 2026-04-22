@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { getSessionId } from '@/lib/session';
 import { useTheme } from '../ThemeProvider';
@@ -22,6 +22,10 @@ interface SidebarProps {
 export function Sidebar({ currentChatId, isOpen, toggleSidebar, onSelectChat, onNewChat }: SidebarProps) {
   const [chats, setChats] = useState<ChatSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
   const { theme, toggle } = useTheme();
 
   useEffect(() => {
@@ -51,11 +55,48 @@ export function Sidebar({ currentChatId, isOpen, toggleSidebar, onSelectChat, on
     loadChats();
   }, [currentChatId]);
 
+  // Focus input when editing
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingId]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!menuOpenId) return;
+    const close = () => setMenuOpenId(null);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [menuOpenId]);
+
+  const handleRename = async (chatId: string) => {
+    if (!editTitle.trim()) return;
+    const supabase = createClient();
+    await supabase.from('chats').update({ title: editTitle.trim() }).eq('id', chatId);
+    setChats(prev => prev.map(c => c.id === chatId ? { ...c, title: editTitle.trim() } : c));
+    setEditingId(null);
+  };
+
+  const handleDelete = async (chatId: string) => {
+    const supabase = createClient();
+    // Delete messages first, then chat
+    await supabase.from('messages').delete().eq('chat_id', chatId);
+    await supabase.from('chats').delete().eq('id', chatId);
+    setChats(prev => prev.filter(c => c.id !== chatId));
+    setMenuOpenId(null);
+    // If deleting current chat, go to new chat
+    if (currentChatId === chatId) {
+      onNewChat();
+    }
+  };
+
   return (
     <>
       <div className={`chat-sidebar ${isOpen ? 'open' : ''}`} style={{
         width: isOpen ? '260px' : '68px',
-        background: theme === 'dark' ? '#1e1f20' : '#f0f4f9', // Gemini-like distinct sidebar colors
+        background: theme === 'dark' ? '#1e1f20' : '#f0f4f9',
         borderRight: 'none',
         display: 'flex',
         flexDirection: 'column',
@@ -64,7 +105,7 @@ export function Sidebar({ currentChatId, isOpen, toggleSidebar, onSelectChat, on
         overflow: 'hidden',
         position: 'relative'
       }}>
-        {/* Hamburger Menu inside Sidebar */}
+        {/* Hamburger Menu */}
         <div style={{ padding: '1rem', display: 'flex', alignItems: 'center', height: '64px' }}>
           {toggleSidebar && (
             <button 
@@ -96,7 +137,7 @@ export function Sidebar({ currentChatId, isOpen, toggleSidebar, onSelectChat, on
               padding: isOpen ? '0.75rem' : '0', 
               height: '42px',
               background: 'var(--bg-color)',
-              border: '1px solid var(--border-color)', borderRadius: '21px', // Pill shape for open, circle for closed
+              border: '1px solid var(--border-color)', borderRadius: '21px',
               color: 'var(--text-color)', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: isOpen ? 'flex-start' : 'center',
               gap: '0.5rem', fontWeight: 500,
@@ -131,30 +172,119 @@ export function Sidebar({ currentChatId, isOpen, toggleSidebar, onSelectChat, on
             </div>
           ) : (
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              {chats.map(chat => (
-                <li key={chat.id}>
-                  <button
-                    onClick={() => { onSelectChat(chat.id); }}
-                    style={{
-                      width: '100%', padding: '0.6rem 0.8rem', textAlign: 'left',
-                      background: currentChatId === chat.id ? 'var(--bg-color)' : 'transparent',
-                      border: 'none', borderRadius: '8px',
-                      color: 'var(--text-color)', cursor: 'pointer',
-                      fontSize: '0.9rem', whiteSpace: 'nowrap',
-                      overflow: 'hidden', textOverflow: 'ellipsis'
-                    }}
-                    onMouseOver={(e) => { if (currentChatId !== chat.id) e.currentTarget.style.background = 'var(--bg-color)' }}
-                    onMouseOut={(e) => { if (currentChatId !== chat.id) e.currentTarget.style.background = 'transparent' }}
-                  >
-                    {chat.title || 'Chat sin título'}
-                  </button>
-                </li>
-              ))}
+              {chats.map(chat => {
+                const isActive = currentChatId === chat.id;
+                const isEditing = editingId === chat.id;
+                const isMenuOpen = menuOpenId === chat.id;
+
+                return (
+                  <li key={chat.id} style={{ position: 'relative' }}>
+                    {isEditing ? (
+                      <form
+                        onSubmit={(e) => { e.preventDefault(); handleRename(chat.id); }}
+                        style={{ display: 'flex', gap: '4px' }}
+                      >
+                        <input
+                          ref={editInputRef}
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          onBlur={() => handleRename(chat.id)}
+                          onKeyDown={(e) => { if (e.key === 'Escape') setEditingId(null); }}
+                          style={{
+                            flex: 1, padding: '0.5rem 0.6rem', fontSize: '0.85rem',
+                            background: 'var(--bg-color)', color: 'var(--text-color)',
+                            border: '1px solid var(--primary-color)', borderRadius: '6px',
+                            outline: 'none',
+                          }}
+                        />
+                      </form>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}
+                           className="sidebar-chat-item"
+                      >
+                        <button
+                          onClick={() => { onSelectChat(chat.id); }}
+                          style={{
+                            width: '100%', padding: '0.6rem 0.8rem', textAlign: 'left',
+                            background: isActive 
+                              ? (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)')
+                              : 'transparent',
+                            border: 'none', borderRadius: '8px',
+                            color: isActive ? 'var(--primary-color)' : 'var(--text-color)',
+                            fontWeight: isActive ? 600 : 400,
+                            cursor: 'pointer',
+                            fontSize: '0.9rem', whiteSpace: 'nowrap',
+                            overflow: 'hidden', textOverflow: 'ellipsis',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseOver={(e) => { if (!isActive) e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }}
+                          onMouseOut={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
+                        >
+                          {chat.title || 'Chat sin título'}
+                        </button>
+                        {/* Three dots menu button */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setMenuOpenId(isMenuOpen ? null : chat.id); }}
+                          className="chat-menu-btn"
+                          style={{
+                            position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)',
+                            background: 'none', border: 'none', color: 'var(--text-color)',
+                            cursor: 'pointer', padding: '4px 6px', borderRadius: '4px',
+                            opacity: isMenuOpen ? 1 : 0,
+                            fontSize: '14px', lineHeight: 1,
+                            transition: 'opacity 0.15s',
+                          }}
+                        >
+                          ⋮
+                        </button>
+                        {/* Dropdown menu */}
+                        {isMenuOpen && (
+                          <div style={{
+                            position: 'absolute', right: 0, top: '100%',
+                            background: theme === 'dark' ? '#2d2e30' : '#fff',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '8px', padding: '4px', zIndex: 100,
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                            minWidth: '140px',
+                          }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setEditTitle(chat.title || ''); setEditingId(chat.id); setMenuOpenId(null); }}
+                              style={{
+                                width: '100%', padding: '8px 12px', textAlign: 'left',
+                                background: 'none', border: 'none', borderRadius: '6px',
+                                color: 'var(--text-color)', cursor: 'pointer', fontSize: '0.85rem',
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'}
+                              onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+                            >
+                              ✏️ Renombrar
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(chat.id); }}
+                              style={{
+                                width: '100%', padding: '8px 12px', textAlign: 'left',
+                                background: 'none', border: 'none', borderRadius: '6px',
+                                color: '#ef4444', cursor: 'pointer', fontSize: '0.85rem',
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'}
+                              onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+                            >
+                              🗑️ Eliminar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
 
-        {/* Theme Toggle at bottom */}
+        {/* Theme Toggle */}
         <div style={{ padding: '1rem 0.8rem', display: 'flex', alignItems: 'center', justifyContent: isOpen ? 'space-between' : 'center', transition: 'all 0.2s' }}>
           {isOpen && (
             <span style={{ fontSize: '0.9rem', color: 'var(--text-color)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden' }}>
@@ -183,13 +313,13 @@ export function Sidebar({ currentChatId, isOpen, toggleSidebar, onSelectChat, on
                 <span style={{ fontSize: '12px' }}>{theme === 'dark' ? '🌙' : '☀️'}</span>
               </div>
             ) : (
-              <span style={{ fontSize: '1.2rem' }}>{theme === 'dark' ? '☀️' : '🌙'}</span> /* Inverted logic here: what it changes to */
+              <span style={{ fontSize: '1.2rem' }}>{theme === 'dark' ? '☀️' : '🌙'}</span>
             )}
           </button>
         </div>
       </div>
       
-      {/* Mobile Styles Handler */}
+      {/* Sidebar styles */}
       <style dangerouslySetInnerHTML={{__html: `
         @media (max-width: 768px) {
           .chat-sidebar {
@@ -199,6 +329,9 @@ export function Sidebar({ currentChatId, isOpen, toggleSidebar, onSelectChat, on
             height: 100vh !important;
             z-index: 1000;
           }
+        }
+        .sidebar-chat-item:hover .chat-menu-btn {
+          opacity: 1 !important;
         }
       `}} />
     </>

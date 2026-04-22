@@ -217,6 +217,10 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
         .map(p => p.text);
       if (textParts.length > 0) return textParts.join('');
     }
+    // Fallback: read content directly (for messages loaded from DB history)
+    if (typeof (msg as any).content === 'string') {
+      return (msg as any).content;
+    }
     return '';
   };
 

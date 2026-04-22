@@ -25,11 +25,12 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Failed to fetch history' }, { status: 500 });
     }
 
-    // Format for AI SDK's initialMessages
+    // Format for AI SDK's UIMessage (must include 'parts' for useChat compatibility)
     const formattedMessages = messages.map((msg: any) => ({
       id: msg.id,
       role: msg.role as 'user' | 'assistant' | 'system' | 'data',
       content: msg.content,
+      parts: [{ type: 'text', text: msg.content }],
       createdAt: new Date(msg.created_at)
     }));
 
