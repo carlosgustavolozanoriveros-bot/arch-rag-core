@@ -66,6 +66,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
   const [imgError, setImgError] = useState(false);
   const [cardState, setCardState] = useState<CardState>('idle');
   const [hasPurchased, setHasPurchased] = useState(purchased);
+  const [isUserSubscriber, setIsUserSubscriber] = useState(false);
   const [checkoutData, setCheckoutData] = useState<any>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -98,6 +99,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       );
 
       if (isSubscriber) {
+        setIsUserSubscriber(true);
         setCardState('subscriber');
         return;
       }
@@ -253,7 +255,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       if (!res.ok) {
         console.error('Download error:', data.error);
         alert(data.error || 'Error al descargar el archivo');
-        setCardState(hasPurchased ? 'purchased' : 'idle');
+        setCardState(isUserSubscriber ? 'subscriber' : (hasPurchased ? 'purchased' : 'idle'));
         return;
       }
       
@@ -284,12 +286,12 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         // Clean up memory
         setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
       }
-      setCardState(hasPurchased ? 'purchased' : 'idle');
+      setCardState(isUserSubscriber ? 'subscriber' : (hasPurchased ? 'purchased' : 'idle'));
     } catch (err) {
       console.error('Failed to trigger download:', err);
-      setCardState(hasPurchased ? 'purchased' : 'idle');
+      setCardState(isUserSubscriber ? 'subscriber' : (hasPurchased ? 'purchased' : 'idle'));
     }
-  }, [hasPurchased]);
+  }, [hasPurchased, isUserSubscriber]);
 
   // Handle download
   const handleDownload = useCallback(() => {
@@ -299,6 +301,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
   // Listen for global subscription events so all cards update instantly
   useEffect(() => {
     const handleGlobalSub = () => {
+      setIsUserSubscriber(true);
       setCardState('subscriber');
     };
     window.addEventListener('subscription_purchased', handleGlobalSub);
@@ -325,14 +328,14 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
   const handleCheckoutError = useCallback((error: string) => {
     console.error('Payment error:', error);
-    setCardState(hasPurchased ? 'purchased' : 'idle');
+    setCardState(isUserSubscriber ? 'subscriber' : (hasPurchased ? 'purchased' : 'idle'));
     setCheckoutData(null);
-  }, [hasPurchased]);
+  }, [hasPurchased, isUserSubscriber]);
 
   const handleCheckoutClose = useCallback(() => {
-    setCardState(prev => prev === 'purchased' ? 'purchased' : 'idle');
+    setCardState(isUserSubscriber ? 'subscriber' : (hasPurchased ? 'purchased' : 'idle'));
     setCheckoutData(null);
-  }, []);
+  }, [hasPurchased, isUserSubscriber]);
 
   // Determine which buttons to show
   const showDownload = cardState === 'purchased' || cardState === 'subscriber' || hasPurchased;
