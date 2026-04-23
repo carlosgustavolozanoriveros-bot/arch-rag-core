@@ -18,6 +18,8 @@ export function Header({ toggleSidebar }: HeaderProps) {
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showResourceModal, setShowResourceModal] = useState(false);
   
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+  
   const [isCancelling, setIsCancelling] = useState(false);
   const [news, setNews] = useState<any[]>([]);
   const [hasUnreadNews, setHasUnreadNews] = useState(false);
@@ -108,14 +110,20 @@ export function Header({ toggleSidebar }: HeaderProps) {
         setProfile((prev: any) => ({ ...prev, cancel_at_period_end: true }));
         setShowCancelModal(false);
         setShowDropdown(false);
+        showToast('Renovación cancelada', 'success');
       } else {
-        alert(data.error || 'Error al cancelar');
+        showToast(data.error || 'Error al cancelar', 'error');
       }
     } catch {
-      alert('Error de conexión');
+      showToast('Error de conexión', 'error');
     } finally {
       setIsCancelling(false);
     }
+  };
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
   };
 
   const submitSupport = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -132,10 +140,10 @@ export function Header({ toggleSidebar }: HeaderProps) {
         })
       });
       if (res.ok) {
-        alert('Reporte enviado con éxito');
+        showToast('Reporte enviado con éxito', 'success');
         setShowSupportModal(false);
       } else {
-        alert('Error al enviar el reporte');
+        showToast('Error al enviar el reporte', 'error');
       }
     } finally {
       setIsSubmitting(false);
@@ -157,10 +165,10 @@ export function Header({ toggleSidebar }: HeaderProps) {
         })
       });
       if (res.ok) {
-        alert('Solicitud enviada con éxito');
+        showToast('Solicitud enviada con éxito', 'success');
         setShowResourceModal(false);
       } else {
-        alert('Error al enviar la solicitud');
+        showToast('Error al enviar la solicitud', 'error');
       }
     } finally {
       setIsSubmitting(false);
@@ -515,6 +523,19 @@ export function Header({ toggleSidebar }: HeaderProps) {
               )}
             </div>
           </div>
+        </div>
+      {/* 5. Custom Toast Notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: '24px', right: '24px', zIndex: 10000,
+          background: toast.type === 'success' ? 'var(--accent-green)' : 'var(--accent-red)',
+          color: 'white', padding: '12px 24px', borderRadius: '8px',
+          boxShadow: 'var(--shadow-lg)',
+          display: 'flex', alignItems: 'center', gap: '8px',
+          animation: 'slideUp 0.3s ease', fontWeight: 500, fontSize: '0.9rem'
+        }}>
+          <span>{toast.type === 'success' ? '✅' : '❌'}</span>
+          <span>{toast.message}</span>
         </div>
       )}
     </>
