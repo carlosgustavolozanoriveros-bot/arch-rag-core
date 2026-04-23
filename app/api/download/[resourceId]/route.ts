@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { google } from 'googleapis';
 
-// Allow longer execution for large file downloads
-export const maxDuration = 60;
+// No need for long duration — we just verify access and redirect
+export const maxDuration = 15;
 
 /**
  * GET /api/download/[resourceId]
  * 
  * Protected download endpoint.
- * Verifies user has access, then streams the file directly from Google Drive
- * through our server using the service account — no Drive UI warnings.
+ * Verifies user has access, then generates a temporary direct download URL
+ * from Google Drive — the browser downloads directly from Google, not through Vercel.
  */
 export async function GET(
   req: NextRequest,
@@ -92,47 +92,32 @@ export async function GET(
       scopes: ['https://www.googleapis.com/auth/drive.readonly'],
     });
 
-    const drive = google.drive({ version: 'v3', auth });
+    // Get a fresh access token
+    const accessToken = await auth.getAccessToken();
+
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Failed to get download token' }, { status: 500 });
+    }
+
+    // Redirect to direct Google Drive download URL with service account token
+    // The browser downloads directly from Google — no Vercel proxy bottleneck
+    const directUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
 
     // Get file metadata for the filename
+    const drive = google.drive({ version: 'v3', auth });
     const fileMeta = await drive.files.get({
       fileId,
-      fields: 'name, mimeType, size',
+      fields: 'name',
     });
 
     const fileName = fileMeta.data.name || `${resource.nombre_ui || 'download'}`;
-    const mimeType = fileMeta.data.mimeType || 'application/octet-stream';
 
-    // Stream file content directly from Drive API
-    const fileResponse = await drive.files.get(
-      { fileId, alt: 'media' },
-      { responseType: 'stream' }
-    );
-
-    // Convert Node.js readable stream to Web ReadableStream
-    const nodeStream = fileResponse.data as any;
-    const webStream = new ReadableStream({
-      start(controller) {
-        nodeStream.on('data', (chunk: Buffer) => {
-          controller.enqueue(new Uint8Array(chunk));
-        });
-        nodeStream.on('end', () => {
-          controller.close();
-        });
-        nodeStream.on('error', (err: Error) => {
-          controller.error(err);
-        });
-      },
-    });
-
-    // Return streaming response with download headers
-    return new Response(webStream, {
-      headers: {
-        'Content-Type': mimeType,
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
-        ...(fileMeta.data.size ? { 'Content-Length': fileMeta.data.size } : {}),
-        'Cache-Control': 'private, no-cache',
-      },
+    // Return redirect with auth header — use fetch on client side
+    // Since we can't set auth headers on a redirect, return the URL + token for client-side download
+    return NextResponse.json({
+      downloadUrl: directUrl,
+      token: accessToken,
+      fileName,
     });
   } catch (error) {
     console.error('Download error:', error);

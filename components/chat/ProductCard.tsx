@@ -243,15 +243,35 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     }
   }, [userId, onRequireLogin]);
 
-  // Trigger download without opening a new tab
-  const triggerDownload = useCallback((resourceId: string) => {
-    const link = document.createElement('a');
-    link.href = `/api/download/${resourceId}`;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }, []);
+  // Trigger download via direct URL
+  const triggerDownload = useCallback(async (resourceId: string) => {
+    try {
+      setCardState('loading');
+      const res = await fetch(`/api/download/${resourceId}`);
+      const data = await res.json();
+      
+      if (!res.ok) {
+        console.error('Download error:', data.error);
+        alert(data.error || 'Error al descargar el archivo');
+        setCardState(hasPurchased ? 'purchased' : 'idle');
+        return;
+      }
+      
+      if (data.downloadUrl && data.token) {
+        // Direct browser download from Google Drive using access_token
+        const link = document.createElement('a');
+        link.href = `${data.downloadUrl}&access_token=${data.token}`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      setCardState(hasPurchased ? 'purchased' : 'idle');
+    } catch (err) {
+      console.error('Failed to trigger download:', err);
+      setCardState(hasPurchased ? 'purchased' : 'idle');
+    }
+  }, [hasPurchased]);
 
   // Handle download
   const handleDownload = useCallback(() => {
@@ -271,12 +291,12 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
   const handleCheckoutError = useCallback((error: string) => {
     console.error('Payment error:', error);
-    setCardState('idle');
+    setCardState(hasPurchased ? 'purchased' : 'idle');
     setCheckoutData(null);
-  }, []);
+  }, [hasPurchased]);
 
   const handleCheckoutClose = useCallback(() => {
-    setCardState('idle');
+    setCardState(prev => prev === 'purchased' ? 'purchased' : 'idle');
     setCheckoutData(null);
   }, []);
 
