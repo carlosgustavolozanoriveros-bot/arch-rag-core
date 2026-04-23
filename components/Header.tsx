@@ -188,13 +188,34 @@ export function Header({ toggleSidebar }: HeaderProps) {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
         padding: '0 1.5rem', height: '64px', background: 'transparent'
       }}>
-        <div className="header-brand hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{ fontWeight: 600, fontSize: '1.2rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="4" y="4" width="10" height="10" stroke="var(--text-secondary)" strokeWidth="2.5" />
-              <rect x="10" y="10" width="10" height="10" stroke="var(--accent-gold)" strokeWidth="2.5" />
-            </svg>
-            <span style={{ letterSpacing: '-0.02em' }}>Asistente de Recursos AEC</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {toggleSidebar && (
+            <button 
+              className="mobile-hamburger"
+              onClick={toggleSidebar}
+              style={{
+                background: 'transparent', border: 'none', color: 'var(--text-color)',
+                cursor: 'pointer', padding: '0.5rem', borderRadius: '50%',
+                display: 'none', alignItems: 'center', justifyContent: 'center',
+                minWidth: '36px', height: '36px'
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
+          )}
+
+          <div className="header-brand hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ fontWeight: 600, fontSize: '1.2rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="4" y="4" width="10" height="10" stroke="var(--text-secondary)" strokeWidth="2.5" />
+                <rect x="10" y="10" width="10" height="10" stroke="var(--accent-gold)" strokeWidth="2.5" />
+              </svg>
+              <span style={{ letterSpacing: '-0.02em' }}>Asistente de Recursos AEC</span>
+            </div>
           </div>
         </div>
 

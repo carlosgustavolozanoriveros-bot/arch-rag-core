@@ -1139,6 +1139,10 @@ body:has([class*="waybox"]) {
     display: none !important;
   }
   
+  .mobile-hamburger {
+    display: flex !important;
+  }
+  
   /* Off-canvas sidebar */
   .mobile-sidebar {
     position: fixed !important;
