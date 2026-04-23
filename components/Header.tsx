@@ -85,7 +85,7 @@ export function Header({ toggleSidebar }: HeaderProps) {
     }
   };
 
-  // Click outside to close dropdown
+  // Click outside to close dropdown & listen for global sub events
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -93,8 +93,21 @@ export function Header({ toggleSidebar }: HeaderProps) {
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    
+    // Listen for subscription purchases to update the dropdown profile instantly
+    const handleGlobalSub = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      }
+    };
+    window.addEventListener('subscription_purchased', handleGlobalSub);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener('subscription_purchased', handleGlobalSub);
+    };
+  }, [supabase]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
