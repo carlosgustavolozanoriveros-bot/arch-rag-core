@@ -3,11 +3,11 @@ import './globals.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
-  title: 'AEC Expert — Asistente de Activos BIM para Revit',
-  description: 'Tu consultor especializado en recursos BIM. Encuentra familias, plantillas y modelos de Revit para arquitectura, ingeniería y construcción. Compra individual $8 USD o PRO $20/mes.',
+  title: 'Asistente de Recursos AEC',
+  description: 'Tu consultor especializado en recursos BIM. Encuentra familias, plantillas y modelos de Revit para arquitectura, ingeniería y construcción.',
   keywords: 'BIM, Revit, familias Revit, arquitectura, ingeniería, construcción, AEC, recursos BIM, plantillas Revit',
   openGraph: {
-    title: 'AEC Expert — Asistente de Activos BIM para Revit',
+    title: 'Asistente de Recursos AEC',
     description: 'Consultor IA especializado en recursos BIM para Revit. +23 packs profesionales de familias paramátricas.',
     type: 'website',
   },

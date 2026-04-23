@@ -98,7 +98,7 @@ export function Header({ toggleSidebar }: HeaderProps) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setShowDropdown(false);
+    window.location.href = '/';
   };
 
   const handleCancelSubscription = async () => {
@@ -189,8 +189,13 @@ export function Header({ toggleSidebar }: HeaderProps) {
         padding: '0 1.5rem', height: '64px', background: 'transparent'
       }}>
         <div className="header-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{ fontWeight: 600, fontSize: '1.2rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span>🏗️</span> Asistente AEC
+          <div style={{ fontWeight: 600, fontSize: '1.2rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="var(--accent-gold)" stroke="var(--accent-gold)" strokeWidth="2" strokeLinejoin="round"/>
+              <path d="M2 17L12 22L22 17" stroke="var(--accent-gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M2 12L12 17L22 12" stroke="var(--accent-gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span style={{ letterSpacing: '-0.02em' }}>Asistente de Recursos AEC</span>
           </div>
         </div>
 

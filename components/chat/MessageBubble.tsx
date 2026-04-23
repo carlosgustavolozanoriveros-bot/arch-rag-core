@@ -61,7 +61,7 @@ export function MessageBubble({ role, content, user }: MessageBubbleProps) {
       </div>
       <div className="message-content">
         <div className="message-role">
-          {isAssistant ? 'Asistente AEC' : (user?.display_name || 'Tú')}
+          {isAssistant ? 'Asistente de Recursos AEC' : (user?.display_name || 'Tú')}
         </div>
         <div className="message-text">
           {formatContent(content)}
