@@ -11,8 +11,18 @@ export function Header({ toggleSidebar }: HeaderProps) {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  
+  // Modals state
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showNewsModal, setShowNewsModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showResourceModal, setShowResourceModal] = useState(false);
+  
   const [isCancelling, setIsCancelling] = useState(false);
+  const [news, setNews] = useState<any[]>([]);
+  const [hasUnreadNews, setHasUnreadNews] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const supabase = createClient();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -21,6 +31,7 @@ export function Header({ toggleSidebar }: HeaderProps) {
       if (session?.user) {
         setUser(session.user);
         fetchProfile(session.user.id);
+        fetchNews();
       }
     });
 
@@ -28,10 +39,15 @@ export function Header({ toggleSidebar }: HeaderProps) {
       (event, session) => {
         if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
           setUser(session?.user ?? null);
-          if (session?.user) fetchProfile(session.user.id);
+          if (session?.user) {
+            fetchProfile(session.user.id);
+            fetchNews();
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setProfile(null);
+          setNews([]);
+          setHasUnreadNews(false);
         }
       }
     );
@@ -46,6 +62,25 @@ export function Header({ toggleSidebar }: HeaderProps) {
       .eq('id', userId)
       .single();
     setProfile(data);
+  };
+
+  const fetchNews = async () => {
+    try {
+      const res = await fetch('/api/news');
+      const data = await res.json();
+      if (data.news) setNews(data.news);
+      setHasUnreadNews(!!data.hasUnread);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const openNews = async () => {
+    setShowNewsModal(true);
+    if (hasUnreadNews) {
+      setHasUnreadNews(false);
+      await fetch('/api/news', { method: 'POST' });
+    }
   };
 
   // Click outside to close dropdown
@@ -83,6 +118,55 @@ export function Header({ toggleSidebar }: HeaderProps) {
     }
   };
 
+  const submitSupport = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    const formData = new FormData(e.currentTarget);
+    try {
+      const res = await fetch('/api/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticket_type: formData.get('type'),
+          description: formData.get('description')
+        })
+      });
+      if (res.ok) {
+        alert('Reporte enviado con éxito');
+        setShowSupportModal(false);
+      } else {
+        alert('Error al enviar el reporte');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const submitResource = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    const formData = new FormData(e.currentTarget);
+    try {
+      const res = await fetch('/api/resource-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: formData.get('title'),
+          description: formData.get('description'),
+          reference_url: formData.get('reference_url')
+        })
+      });
+      if (res.ok) {
+        alert('Solicitud enviada con éxito');
+        setShowResourceModal(false);
+      } else {
+        alert('Error al enviar la solicitud');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const userName = user?.user_metadata?.full_name || user?.email || 'Usuario';
   const initial = userName.charAt(0).toUpperCase();
   const isSubscriber = profile?.role === 'subscriber' || profile?.role === 'admin';
@@ -104,128 +188,195 @@ export function Header({ toggleSidebar }: HeaderProps) {
 
         <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {user ? (
-            <div className="user-menu" style={{ position: 'relative' }} ref={dropdownRef}>
-              <button 
-                className="user-avatar-btn"
-                onClick={() => setShowDropdown(!showDropdown)}
+            <>
+              {/* Notification Bell */}
+              <button
+                onClick={openNews}
                 style={{
-                  width: '40px', height: '40px', borderRadius: '50%',
-                  background: 'var(--primary-color)', color: 'white',
-                  border: '2px solid rgba(255,255,255,0.15)', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 'bold', fontSize: '1rem', transition: 'border-color 0.2s',
-                  overflow: 'hidden'
+                  background: 'transparent', border: 'none', color: 'var(--text-secondary)',
+                  cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center',
+                  padding: '0.5rem', borderRadius: '50%', transition: 'background 0.2s'
                 }}
-                title={userName}
+                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                title="Novedades"
               >
-                {user.user_metadata?.avatar_url ? (
-                  <img src={user.user_metadata.avatar_url} alt={userName} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                ) : (
-                  initial
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                {hasUnreadNews && (
+                  <span style={{
+                    position: 'absolute', top: '4px', right: '4px', width: '8px', height: '8px',
+                    background: '#ff4d4f', borderRadius: '50%', border: '2px solid var(--bg-primary)'
+                  }} />
                 )}
               </button>
-              
-              {showDropdown && (
-                <div className="profile-dropdown" style={{
-                  position: 'absolute', top: 'calc(100% + 8px)', right: '0',
-                  background: 'var(--card-bg, #1a1a2e)',
-                  border: '1px solid var(--border-color, rgba(255,255,255,0.1))',
-                  borderRadius: '12px', padding: '0', minWidth: '240px',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 1000,
-                  overflow: 'hidden', animation: 'slideDown 0.2s ease'
-                }}>
-                  {/* User info section */}
-                  <div style={{ padding: '1rem 1rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.08))' }}>
-                    <div style={{
-                      width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
-                      background: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: 'white', fontWeight: 'bold', fontSize: '1.1rem'
-                    }}>
-                      {user.user_metadata?.avatar_url ? (
-                        <img src={user.user_metadata.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : initial}
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, color: 'var(--text-color, #f0f0f5)', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {userName}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #a0a0b0)', marginTop: '2px' }}>
-                        {user.email}
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Subscription status */}
-                  <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.08))' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #a0a0b0)' }}>Suscripción</span>
-                      <span style={{
-                        fontSize: '0.65rem', padding: '2px 8px', borderRadius: '10px', fontWeight: 600,
-                        background: isSubscriber ? 'rgba(82, 196, 26, 0.15)' : 'rgba(255,255,255,0.06)',
-                        color: isSubscriber ? '#52c41a' : 'var(--text-secondary, #a0a0b0)',
-                        border: `1px solid ${isSubscriber ? 'rgba(82, 196, 26, 0.3)' : 'rgba(255,255,255,0.1)'}`
+              <div className="user-menu" style={{ position: 'relative' }} ref={dropdownRef}>
+                <button 
+                  className="user-avatar-btn"
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  style={{
+                    width: '40px', height: '40px', borderRadius: '50%',
+                    background: 'var(--primary-color)', color: 'white',
+                    border: '2px solid rgba(255,255,255,0.15)', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 'bold', fontSize: '1rem', transition: 'border-color 0.2s',
+                    overflow: 'hidden'
+                  }}
+                  title={userName}
+                >
+                  {user.user_metadata?.avatar_url ? (
+                    <img src={user.user_metadata.avatar_url} alt={userName} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    initial
+                  )}
+                </button>
+                
+                {showDropdown && (
+                  <div className="profile-dropdown" style={{
+                    position: 'absolute', top: 'calc(100% + 8px)', right: '0',
+                    background: 'var(--card-bg, #1a1a2e)',
+                    border: '1px solid var(--border-color, rgba(255,255,255,0.1))',
+                    borderRadius: '12px', padding: '0', minWidth: '240px',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 1000,
+                    overflow: 'hidden', animation: 'slideDown 0.2s ease'
+                  }}>
+                    {/* User info section */}
+                    <div style={{ padding: '1rem 1rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.08))' }}>
+                      <div style={{
+                        width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+                        background: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: 'white', fontWeight: 'bold', fontSize: '1.1rem'
                       }}>
-                        {isSubscriber ? '✓ Activa' : 'Free'}
-                      </span>
+                        {user.user_metadata?.avatar_url ? (
+                          <img src={user.user_metadata.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : initial}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-color, #f0f0f5)', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {userName}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #a0a0b0)', marginTop: '2px' }}>
+                          {user.email}
+                        </div>
+                      </div>
                     </div>
-                    {isSubscriber && expiresAt && (
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary, #a0a0b0)' }}>
-                        Válida hasta {expiresAt}
-                      </div>
-                    )}
 
-                    {isSubscriber && profile?.cancel_at_period_end && (
-                      <div style={{ 
-                        marginTop: '0.5rem', fontSize: '0.72rem', color: '#ff6b6b', 
-                        background: 'rgba(255, 77, 79, 0.08)', padding: '0.4rem', 
-                        borderRadius: '6px', textAlign: 'center', border: '1px solid rgba(255, 77, 79, 0.1)' 
-                      }}>
-                        No se renovará automáticamente
+                    {/* Subscription status */}
+                    <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.08))' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #a0a0b0)' }}>Suscripción</span>
+                        <span style={{
+                          fontSize: '0.65rem', padding: '2px 8px', borderRadius: '10px', fontWeight: 600,
+                          background: isSubscriber ? 'rgba(82, 196, 26, 0.15)' : 'rgba(255,255,255,0.06)',
+                          color: isSubscriber ? '#52c41a' : 'var(--text-secondary, #a0a0b0)',
+                          border: `1px solid ${isSubscriber ? 'rgba(82, 196, 26, 0.3)' : 'rgba(255,255,255,0.1)'}`
+                        }}>
+                          {isSubscriber ? '✓ Activa' : 'Free'}
+                        </span>
                       </div>
-                    )}
+                      {isSubscriber && expiresAt && (
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary, #a0a0b0)' }}>
+                          Válida hasta {expiresAt}
+                        </div>
+                      )}
 
-                    {isSubscriber && profile?.role !== 'admin' && !profile?.cancel_at_period_end && (
-                      <button
-                        onClick={() => { setShowCancelModal(true); setShowDropdown(false); }}
+                      {isSubscriber && profile?.cancel_at_period_end && (
+                        <div style={{ 
+                          marginTop: '0.5rem', fontSize: '0.72rem', color: '#ff6b6b', 
+                          background: 'rgba(255, 77, 79, 0.08)', padding: '0.4rem', 
+                          borderRadius: '6px', textAlign: 'center', border: '1px solid rgba(255, 77, 79, 0.1)' 
+                        }}>
+                          No se renovará automáticamente
+                        </div>
+                      )}
+
+                      {isSubscriber && profile?.role !== 'admin' && !profile?.cancel_at_period_end && (
+                        <button
+                          onClick={() => { setShowCancelModal(true); setShowDropdown(false); }}
+                          style={{
+                            marginTop: '0.5rem', width: '100%', padding: '0.4rem',
+                            background: 'rgba(255, 77, 79, 0.08)', border: '1px solid rgba(255, 77, 79, 0.2)',
+                            borderRadius: '6px', color: '#ff6b6b', cursor: 'pointer',
+                            fontSize: '0.78rem', fontWeight: 500, transition: 'all 0.2s'
+                          }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 77, 79, 0.15)'; e.currentTarget.style.borderColor = 'rgba(255, 77, 79, 0.4)'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255, 77, 79, 0.08)'; e.currentTarget.style.borderColor = 'rgba(255, 77, 79, 0.2)'; }}
+                        >
+                          Cancelar suscripción
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.08))' }}>
+                      <button 
+                        onClick={() => { setShowResourceModal(true); setShowDropdown(false); }}
                         style={{
-                          marginTop: '0.5rem', width: '100%', padding: '0.4rem',
-                          background: 'rgba(255, 77, 79, 0.08)', border: '1px solid rgba(255, 77, 79, 0.2)',
-                          borderRadius: '6px', color: '#ff6b6b', cursor: 'pointer',
-                          fontSize: '0.78rem', fontWeight: 500, transition: 'all 0.2s'
+                          width: '100%', padding: '0.5rem 0.75rem', textAlign: 'left',
+                          background: 'transparent', border: 'none', color: 'var(--text-color)',
+                          cursor: 'pointer', borderRadius: '6px', fontSize: '0.85rem',
+                          display: 'flex', alignItems: 'center', gap: '0.5rem',
+                          transition: 'background 0.2s'
                         }}
-                        onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 77, 79, 0.15)'; e.currentTarget.style.borderColor = 'rgba(255, 77, 79, 0.4)'; }}
-                        onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255, 77, 79, 0.08)'; e.currentTarget.style.borderColor = 'rgba(255, 77, 79, 0.2)'; }}
+                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                       >
-                        Cancelar suscripción
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                          <polyline points="7 10 12 15 17 10"></polyline>
+                          <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Solicitar Recurso
                       </button>
-                    )}
-                  </div>
+                      
+                      <button 
+                        onClick={() => { setShowSupportModal(true); setShowDropdown(false); }}
+                        style={{
+                          width: '100%', padding: '0.5rem 0.75rem', textAlign: 'left',
+                          background: 'transparent', border: 'none', color: 'var(--text-color)',
+                          cursor: 'pointer', borderRadius: '6px', fontSize: '0.85rem',
+                          display: 'flex', alignItems: 'center', gap: '0.5rem',
+                          transition: 'background 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                        </svg>
+                        Reportar un problema
+                      </button>
+                    </div>
 
-                  {/* Actions */}
-                  <div style={{ padding: '0.5rem' }}>
-                    <button 
-                      onClick={handleLogout}
-                      style={{
-                        width: '100%', padding: '0.5rem 0.75rem', textAlign: 'left',
-                        background: 'transparent', border: 'none', color: '#ff4d4f',
-                        cursor: 'pointer', borderRadius: '6px', fontSize: '0.85rem',
-                        display: 'flex', alignItems: 'center', gap: '0.5rem',
-                        transition: 'background 0.2s'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 77, 79, 0.08)'}
-                      onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16 17 21 12 16 7"/>
-                        <line x1="21" y1="12" x2="9" y2="12"/>
-                      </svg>
-                      Cerrar sesión
-                    </button>
+                    {/* Logout Actions */}
+                    <div style={{ padding: '0.5rem' }}>
+                      <button 
+                        onClick={handleLogout}
+                        style={{
+                          width: '100%', padding: '0.5rem 0.75rem', textAlign: 'left',
+                          background: 'transparent', border: 'none', color: '#ff4d4f',
+                          cursor: 'pointer', borderRadius: '6px', fontSize: '0.85rem',
+                          display: 'flex', alignItems: 'center', gap: '0.5rem',
+                          transition: 'background 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 77, 79, 0.08)'}
+                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                          <polyline points="16 17 21 12 16 7"/>
+                          <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                        Cerrar sesión
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </>
           ) : (
             <button
               onClick={async () => {
@@ -256,62 +407,112 @@ export function Header({ toggleSidebar }: HeaderProps) {
         </div>
       </header>
 
-      {/* Cancel Subscription Confirmation Modal */}
+      {/* --- Modals --- */}
+      
+      {/* 1. Cancel Subscription */}
       {showCancelModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 9999, animation: 'fadeIn 0.2s ease'
-        }} onClick={() => !isCancelling && setShowCancelModal(false)}>
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'var(--card-bg, #1a1a2e)',
-              border: '1px solid var(--border-color, rgba(255,255,255,0.1))',
-              borderRadius: '16px', padding: '2rem', maxWidth: '400px', width: '90%',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.5)', textAlign: 'center',
-              animation: 'slideDown 0.3s ease'
-            }}
-          >
+        <div style={modalOverlayStyle} onClick={() => !isCancelling && setShowCancelModal(false)}>
+          <div style={modalContentStyle} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>⚠️</div>
-            <h3 style={{ color: 'var(--text-color, #f0f0f5)', margin: '0 0 0.5rem', fontSize: '1.15rem' }}>
-              ¿Cancelar suscripción?
-            </h3>
-            <p style={{ color: 'var(--text-secondary, #a0a0b0)', fontSize: '0.85rem', margin: '0 0 1.5rem', lineHeight: 1.5 }}>
-              Perderás acceso a todos los recursos premium y descargas ilimitadas. Esta acción no se puede deshacer.
+            <h3 style={modalTitleStyle}>¿Cancelar suscripción?</h3>
+            <p style={modalTextStyle}>
+              Perderás acceso a todos los recursos premium y descargas ilimitadas al final de tu periodo actual. Esta acción no se puede deshacer.
             </p>
-
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button
-                onClick={() => setShowCancelModal(false)}
-                disabled={isCancelling}
-                style={{
-                  flex: 1, padding: '0.65rem', borderRadius: '8px',
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-color, rgba(255,255,255,0.1))',
-                  color: 'var(--text-color, #f0f0f5)', cursor: 'pointer',
-                  fontSize: '0.85rem', fontWeight: 500, transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-              >
+              <button onClick={() => setShowCancelModal(false)} disabled={isCancelling} style={btnSecondaryStyle}>
                 Mantener
               </button>
-              <button
-                onClick={handleCancelSubscription}
-                disabled={isCancelling}
-                style={{
-                  flex: 1, padding: '0.65rem', borderRadius: '8px',
-                  background: isCancelling ? 'rgba(255, 77, 79, 0.3)' : 'rgba(255, 77, 79, 0.15)',
-                  border: '1px solid rgba(255, 77, 79, 0.3)',
-                  color: '#ff4d4f', cursor: isCancelling ? 'wait' : 'pointer',
-                  fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => !isCancelling && (e.currentTarget.style.background = 'rgba(255, 77, 79, 0.25)')}
-                onMouseOut={(e) => !isCancelling && (e.currentTarget.style.background = 'rgba(255, 77, 79, 0.15)')}
-              >
+              <button onClick={handleCancelSubscription} disabled={isCancelling} style={btnDangerStyle}>
                 {isCancelling ? 'Cancelando...' : 'Sí, cancelar'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Support / Bug Report */}
+      {showSupportModal && (
+        <div style={modalOverlayStyle} onClick={() => !isSubmitting && setShowSupportModal(false)}>
+          <div style={{...modalContentStyle, maxWidth: '500px', textAlign: 'left'}} onClick={(e) => e.stopPropagation()}>
+            <h3 style={modalTitleStyle}>Soporte / Reportar Problema</h3>
+            <p style={modalTextStyle}>Cuéntanos qué pasó o qué podemos mejorar en el chat.</p>
+            
+            <form onSubmit={submitSupport} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Tipo</label>
+                <select name="type" required style={inputStyle}>
+                  <option value="bug">Error en el sistema (Bug)</option>
+                  <option value="suggestion">Sugerencia de mejora</option>
+                  <option value="other">Otro</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Descripción</label>
+                <textarea name="description" required rows={4} placeholder="Detalla el problema o sugerencia..." style={{...inputStyle, resize: 'vertical'}} />
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button type="button" onClick={() => setShowSupportModal(false)} disabled={isSubmitting} style={btnSecondaryStyle}>Cancelar</button>
+                <button type="submit" disabled={isSubmitting} style={btnPrimaryStyle}>{isSubmitting ? 'Enviando...' : 'Enviar Reporte'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Resource Request */}
+      {showResourceModal && (
+        <div style={modalOverlayStyle} onClick={() => !isSubmitting && setShowResourceModal(false)}>
+          <div style={{...modalContentStyle, maxWidth: '500px', textAlign: 'left'}} onClick={(e) => e.stopPropagation()}>
+            <h3 style={modalTitleStyle}>Solicitar un Recurso</h3>
+            <p style={modalTextStyle}>¿No encontraste lo que buscabas? Pídenoslo y lo subiremos a la base de datos.</p>
+            
+            <form onSubmit={submitResource} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>¿Qué necesitas?</label>
+                <input name="title" required type="text" placeholder="Ej: Familia de puerta pivotante Revit" style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Descripción adicional</label>
+                <textarea name="description" required rows={3} placeholder="Para qué versión, medidas, detalles técnicos..." style={{...inputStyle, resize: 'vertical'}} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>URL de referencia (opcional)</label>
+                <input name="reference_url" type="url" placeholder="https://ejemplo.com/recurso" style={inputStyle} />
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button type="button" onClick={() => setShowResourceModal(false)} disabled={isSubmitting} style={btnSecondaryStyle}>Cancelar</button>
+                <button type="submit" disabled={isSubmitting} style={btnPrimaryStyle}>{isSubmitting ? 'Enviando...' : 'Solicitar'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4. News / Novedades */}
+      {showNewsModal && (
+        <div style={modalOverlayStyle} onClick={() => setShowNewsModal(false)}>
+          <div style={{...modalContentStyle, maxWidth: '500px', textAlign: 'left'}} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{...modalTitleStyle, margin: 0}}>Novedades</h3>
+              <button onClick={() => setShowNewsModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '60vh', overflowY: 'auto', paddingRight: '0.5rem' }}>
+              {news.length === 0 ? (
+                <p style={modalTextStyle}>No hay novedades recientes.</p>
+              ) : (
+                news.map(item => (
+                  <div key={item.id} style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--border-color, rgba(255,255,255,0.05))' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--primary-color)', marginBottom: '0.25rem', fontWeight: 600 }}>
+                      {new Date(item.created_at).toLocaleDateString('es-CO')}
+                    </div>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)', fontSize: '1rem' }}>{item.title}</h4>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5 }}>{item.content}</p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -319,3 +520,44 @@ export function Header({ toggleSidebar }: HeaderProps) {
     </>
   );
 }
+
+// Reusable Styles
+const modalOverlayStyle: React.CSSProperties = {
+  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+  background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  zIndex: 9999, animation: 'fadeIn 0.2s ease', padding: '1rem'
+};
+
+const modalContentStyle: React.CSSProperties = {
+  background: 'var(--card-bg, #1a1a2e)', border: '1px solid var(--border-color, rgba(255,255,255,0.1))',
+  borderRadius: '16px', padding: '2rem', width: '100%', maxWidth: '400px',
+  boxShadow: '0 20px 60px rgba(0,0,0,0.5)', textAlign: 'center', animation: 'slideDown 0.3s ease'
+};
+
+const modalTitleStyle: React.CSSProperties = { color: 'var(--text-color, #f0f0f5)', margin: '0 0 0.5rem', fontSize: '1.15rem' };
+const modalTextStyle: React.CSSProperties = { color: 'var(--text-secondary, #a0a0b0)', fontSize: '0.85rem', margin: '0 0 1.5rem', lineHeight: 1.5 };
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '0.75rem', borderRadius: '8px',
+  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+  color: 'var(--text-color)', fontSize: '0.9rem', fontFamily: 'inherit'
+};
+
+const btnSecondaryStyle: React.CSSProperties = {
+  flex: 1, padding: '0.65rem', borderRadius: '8px',
+  background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-color, rgba(255,255,255,0.1))',
+  color: 'var(--text-color, #f0f0f5)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500, transition: 'all 0.2s'
+};
+
+const btnPrimaryStyle: React.CSSProperties = {
+  flex: 1, padding: '0.65rem', borderRadius: '8px',
+  background: 'var(--primary-color)', border: 'none',
+  color: 'white', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.2s'
+};
+
+const btnDangerStyle: React.CSSProperties = {
+  flex: 1, padding: '0.65rem', borderRadius: '8px',
+  background: 'rgba(255, 77, 79, 0.15)', border: '1px solid rgba(255, 77, 79, 0.3)',
+  color: '#ff4d4f', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.2s'
+};
