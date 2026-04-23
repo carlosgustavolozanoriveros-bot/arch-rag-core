@@ -258,13 +258,31 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       }
       
       if (data.downloadUrl && data.token) {
-        // Direct browser download from Google Drive using access_token
+        // Fetch file directly from Google API into a browser Blob
+        // This avoids Vercel proxy AND Google's "automated queries" direct-link block
+        const fileRes = await fetch(data.downloadUrl, {
+          headers: {
+            'Authorization': `Bearer ${data.token}`
+          }
+        });
+
+        if (!fileRes.ok) {
+          throw new Error('Error downloading from Google Drive');
+        }
+
+        // Convert to blob and trigger local download
+        const blob = await fileRes.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
         const link = document.createElement('a');
-        link.href = `${data.downloadUrl}&access_token=${data.token}`;
-        link.style.display = 'none';
+        link.href = blobUrl;
+        link.download = data.fileName || 'download';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        
+        // Clean up memory
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
       }
       setCardState(hasPurchased ? 'purchased' : 'idle');
     } catch (err) {
