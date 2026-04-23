@@ -188,13 +188,13 @@ export function Header({ toggleSidebar }: HeaderProps) {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
         padding: '0 1.5rem', height: '64px', background: 'transparent'
       }}>
-        <div className="header-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="header-brand hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{ fontWeight: 600, fontSize: '1.2rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="4" y="4" width="10" height="10" stroke="var(--text-secondary)" strokeWidth="2.5" />
               <rect x="10" y="10" width="10" height="10" stroke="var(--accent-gold)" strokeWidth="2.5" />
             </svg>
-            <span className="hide-on-mobile" style={{ letterSpacing: '-0.02em' }}>Asistente de Recursos AEC</span>
+            <span style={{ letterSpacing: '-0.02em' }}>Asistente de Recursos AEC</span>
           </div>
         </div>
 
