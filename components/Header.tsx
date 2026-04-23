@@ -524,6 +524,7 @@ export function Header({ toggleSidebar }: HeaderProps) {
             </div>
           </div>
         </div>
+      )}
       {/* 5. Custom Toast Notification */}
       {toast && (
         <div style={{
