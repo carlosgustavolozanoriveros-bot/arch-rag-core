@@ -37,27 +37,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No active subscription' }, { status: 400 });
     }
 
-    // Revoke Drive access immediately
-    if (profile.email) {
-      try {
-        await revokeAllFoldersAccess(profile.email);
-      } catch (driveError) {
-        console.error('⚠️ Drive revocation failed during cancel:', driveError);
-        // Continue anyway — the cron will catch it
-      }
-    }
-
-    // Update user profile: set to free, clear expiration
+    // Update user profile: set cancel flag, but keep role and expiration intact
     await serviceClient
       .from('user_profiles')
       .update({
-        role: 'free',
-        subscription_expires_at: null,
+        cancel_at_period_end: true,
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId);
 
-    console.log(`✅ Subscription cancelled for user ${userId}`);
+    console.log(`✅ Auto-renew cancelled for user ${userId}. Subscription valid until expiration.`);
 
     return NextResponse.json({
       message: 'Suscripción cancelada exitosamente',

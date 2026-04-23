@@ -42,7 +42,7 @@ export function Header({ toggleSidebar }: HeaderProps) {
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
       .from('user_profiles')
-      .select('role, subscription_expires_at')
+      .select('role, subscription_expires_at, cancel_at_period_end')
       .eq('id', userId)
       .single();
     setProfile(data);
@@ -70,7 +70,7 @@ export function Header({ toggleSidebar }: HeaderProps) {
       const res = await fetch('/api/subscription/cancel', { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
-        setProfile((prev: any) => ({ ...prev, role: 'free', subscription_expires_at: null }));
+        setProfile((prev: any) => ({ ...prev, cancel_at_period_end: true }));
         setShowCancelModal(false);
         setShowDropdown(false);
       } else {
@@ -174,7 +174,17 @@ export function Header({ toggleSidebar }: HeaderProps) {
                       </div>
                     )}
 
-                    {isSubscriber && profile?.role !== 'admin' && (
+                    {isSubscriber && profile?.cancel_at_period_end && (
+                      <div style={{ 
+                        marginTop: '0.5rem', fontSize: '0.72rem', color: '#ff6b6b', 
+                        background: 'rgba(255, 77, 79, 0.08)', padding: '0.4rem', 
+                        borderRadius: '6px', textAlign: 'center', border: '1px solid rgba(255, 77, 79, 0.1)' 
+                      }}>
+                        No se renovará automáticamente
+                      </div>
+                    )}
+
+                    {isSubscriber && profile?.role !== 'admin' && !profile?.cancel_at_period_end && (
                       <button
                         onClick={() => { setShowCancelModal(true); setShowDropdown(false); }}
                         style={{
