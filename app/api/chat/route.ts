@@ -10,8 +10,18 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   const { messages, sessionId, chatId, isAuthenticated } = await req.json();
 
+  // Remove custom tool types before converting to avoid AI SDK crashes
+  // history/route.ts adds 'tool-search_products' which is not a valid Core part
+  const sanitizedMessages = messages.map((m: any) => {
+    if (!m.parts) return m;
+    return {
+      ...m,
+      parts: m.parts.filter((p: any) => p.type !== 'tool-search_products')
+    };
+  });
+
   // Normalize messages for AI SDK v6 schema compatibility
-  const modelMessages = await convertToModelMessages(messages);
+  const modelMessages = await convertToModelMessages(sanitizedMessages);
 
   const supabase = createServiceRoleClient();
 
@@ -21,31 +31,18 @@ export async function POST(req: Request) {
   // Save user message to DB
   const lastUserMessage = modelMessages[modelMessages.length - 1];
   if (currentChatId && lastUserMessage?.role === 'user') {
-    const textContent = (lastUserMessage.content?.[0] as any)?.text || '';
+    const textContent = typeof lastUserMessage.content === 'string' 
+      ? lastUserMessage.content 
+      : Array.isArray(lastUserMessage.content) 
+        ? (lastUserMessage.content.find(p => p.type === 'text') as any)?.text || ''
+        : '';
+        
     await supabase.from('messages').insert({
       chat_id: currentChatId,
       role: 'user',
       content: textContent,
     });
   }
-
-  // Build context: load conversation history from DB for memory
-  let dbMessages: { role: string; content: string }[] = [];
-  if (currentChatId) {
-    const { data } = await supabase
-      .from('messages')
-      .select('role, content')
-      .eq('chat_id', currentChatId)
-      .order('created_at', { ascending: true })
-      .limit(50);
-    if (data) dbMessages = data;
-  }
-
-  // Use DB messages for context if available, otherwise use direct messages
-  const contextMessages = dbMessages.length > 0
-    ? dbMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
-    : messages;
-
   // Capture search results via closure — the tool writes here, onFinish reads
   let capturedSearchResults: any[] | null = null;
 
