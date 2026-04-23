@@ -296,16 +296,32 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     triggerDownload(product.id);
   }, [product.id, triggerDownload]);
 
+  // Listen for global subscription events so all cards update instantly
+  useEffect(() => {
+    const handleGlobalSub = () => {
+      setCardState('subscriber');
+    };
+    window.addEventListener('subscription_purchased', handleGlobalSub);
+    return () => window.removeEventListener('subscription_purchased', handleGlobalSub);
+  }, []);
+
   // Checkout callbacks
   const handleCheckoutSuccess = useCallback(() => {
+    const isSub = checkoutData?.purchaseType === 'subscription';
+    
     setCardState('purchased');
     setHasPurchased(true);
+    
+    if (isSub) {
+      window.dispatchEvent(new Event('subscription_purchased'));
+    }
+    
     setCheckoutData(null);
     // Auto-start download after successful payment
     setTimeout(() => {
       triggerDownload(product.id);
     }, 500);
-  }, [product.id, triggerDownload]);
+  }, [product.id, triggerDownload, checkoutData]);
 
   const handleCheckoutError = useCallback((error: string) => {
     console.error('Payment error:', error);

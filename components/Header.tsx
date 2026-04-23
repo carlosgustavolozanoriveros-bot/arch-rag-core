@@ -181,7 +181,7 @@ export function Header({ toggleSidebar }: HeaderProps) {
         padding: '0 1.5rem', height: '64px', background: 'transparent'
       }}>
         <div className="header-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{ fontWeight: 600, fontSize: '1.2rem', color: 'var(--text-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ fontWeight: 600, fontSize: '1.2rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span>🏗️</span> Asistente AEC
           </div>
         </div>
@@ -237,17 +237,17 @@ export function Header({ toggleSidebar }: HeaderProps) {
                 {showDropdown && (
                   <div className="profile-dropdown" style={{
                     position: 'absolute', top: 'calc(100% + 8px)', right: '0',
-                    background: 'var(--card-bg, #1a1a2e)',
-                    border: '1px solid var(--border-color, rgba(255,255,255,0.1))',
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border-default)',
                     borderRadius: '12px', padding: '0', minWidth: '240px',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 1000,
+                    boxShadow: 'var(--shadow-lg)', zIndex: 1000,
                     overflow: 'hidden', animation: 'slideDown 0.2s ease'
                   }}>
                     {/* User info section */}
-                    <div style={{ padding: '1rem 1rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.08))' }}>
+                    <div style={{ padding: '1rem 1rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid var(--border-default)' }}>
                       <div style={{
                         width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
-                        background: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'var(--accent-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         color: 'white', fontWeight: 'bold', fontSize: '1.1rem'
                       }}>
                         {user.user_metadata?.avatar_url ? (
@@ -255,39 +255,39 @@ export function Header({ toggleSidebar }: HeaderProps) {
                         ) : initial}
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text-color, #f0f0f5)', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {userName}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #a0a0b0)', marginTop: '2px' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                           {user.email}
                         </div>
                       </div>
                     </div>
 
                     {/* Subscription status */}
-                    <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.08))' }}>
+                    <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-default)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #a0a0b0)' }}>Suscripción</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Suscripción</span>
                         <span style={{
                           fontSize: '0.65rem', padding: '2px 8px', borderRadius: '10px', fontWeight: 600,
-                          background: isSubscriber ? 'rgba(82, 196, 26, 0.15)' : 'rgba(255,255,255,0.06)',
-                          color: isSubscriber ? '#52c41a' : 'var(--text-secondary, #a0a0b0)',
-                          border: `1px solid ${isSubscriber ? 'rgba(82, 196, 26, 0.3)' : 'rgba(255,255,255,0.1)'}`
+                          background: isSubscriber ? 'rgba(78, 203, 113, 0.15)' : 'var(--bg-tertiary)',
+                          color: isSubscriber ? 'var(--accent-green)' : 'var(--text-secondary)',
+                          border: `1px solid ${isSubscriber ? 'rgba(78, 203, 113, 0.3)' : 'var(--border-default)'}`
                         }}>
                           {isSubscriber ? '✓ Activa' : 'Free'}
                         </span>
                       </div>
                       {isSubscriber && expiresAt && (
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary, #a0a0b0)' }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
                           Válida hasta {expiresAt}
                         </div>
                       )}
 
                       {isSubscriber && profile?.cancel_at_period_end && (
                         <div style={{ 
-                          marginTop: '0.5rem', fontSize: '0.72rem', color: '#ff6b6b', 
-                          background: 'rgba(255, 77, 79, 0.08)', padding: '0.4rem', 
-                          borderRadius: '6px', textAlign: 'center', border: '1px solid rgba(255, 77, 79, 0.1)' 
+                          marginTop: '0.5rem', fontSize: '0.72rem', color: 'var(--accent-red)', 
+                          background: 'rgba(239, 91, 91, 0.08)', padding: '0.4rem', 
+                          borderRadius: '6px', textAlign: 'center', border: '1px solid rgba(239, 91, 91, 0.2)' 
                         }}>
                           No se renovará automáticamente
                         </div>
@@ -298,12 +298,12 @@ export function Header({ toggleSidebar }: HeaderProps) {
                           onClick={() => { setShowCancelModal(true); setShowDropdown(false); }}
                           style={{
                             marginTop: '0.5rem', width: '100%', padding: '0.4rem',
-                            background: 'rgba(255, 77, 79, 0.08)', border: '1px solid rgba(255, 77, 79, 0.2)',
-                            borderRadius: '6px', color: '#ff6b6b', cursor: 'pointer',
+                            background: 'rgba(239, 91, 91, 0.08)', border: '1px solid rgba(239, 91, 91, 0.2)',
+                            borderRadius: '6px', color: 'var(--accent-red)', cursor: 'pointer',
                             fontSize: '0.78rem', fontWeight: 500, transition: 'all 0.2s'
                           }}
-                          onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 77, 79, 0.15)'; e.currentTarget.style.borderColor = 'rgba(255, 77, 79, 0.4)'; }}
-                          onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255, 77, 79, 0.08)'; e.currentTarget.style.borderColor = 'rgba(255, 77, 79, 0.2)'; }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(239, 91, 91, 0.15)'; e.currentTarget.style.borderColor = 'rgba(239, 91, 91, 0.4)'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(239, 91, 91, 0.08)'; e.currentTarget.style.borderColor = 'rgba(239, 91, 91, 0.2)'; }}
                         >
                           Cancelar suscripción
                         </button>
@@ -311,17 +311,17 @@ export function Header({ toggleSidebar }: HeaderProps) {
                     </div>
 
                     {/* Quick Actions */}
-                    <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.08))' }}>
+                    <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border-default)' }}>
                       <button 
                         onClick={() => { setShowResourceModal(true); setShowDropdown(false); }}
                         style={{
                           width: '100%', padding: '0.5rem 0.75rem', textAlign: 'left',
-                          background: 'transparent', border: 'none', color: 'var(--text-color)',
+                          background: 'transparent', border: 'none', color: 'var(--text-primary)',
                           cursor: 'pointer', borderRadius: '6px', fontSize: '0.85rem',
                           display: 'flex', alignItems: 'center', gap: '0.5rem',
                           transition: 'background 0.2s'
                         }}
-                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                        onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
                         onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -336,12 +336,12 @@ export function Header({ toggleSidebar }: HeaderProps) {
                         onClick={() => { setShowSupportModal(true); setShowDropdown(false); }}
                         style={{
                           width: '100%', padding: '0.5rem 0.75rem', textAlign: 'left',
-                          background: 'transparent', border: 'none', color: 'var(--text-color)',
+                          background: 'transparent', border: 'none', color: 'var(--text-primary)',
                           cursor: 'pointer', borderRadius: '6px', fontSize: '0.85rem',
                           display: 'flex', alignItems: 'center', gap: '0.5rem',
                           transition: 'background 0.2s'
                         }}
-                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                        onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
                         onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -357,12 +357,12 @@ export function Header({ toggleSidebar }: HeaderProps) {
                         onClick={handleLogout}
                         style={{
                           width: '100%', padding: '0.5rem 0.75rem', textAlign: 'left',
-                          background: 'transparent', border: 'none', color: '#ff4d4f',
+                          background: 'transparent', border: 'none', color: 'var(--accent-red)',
                           cursor: 'pointer', borderRadius: '6px', fontSize: '0.85rem',
                           display: 'flex', alignItems: 'center', gap: '0.5rem',
                           transition: 'background 0.2s'
                         }}
-                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 77, 79, 0.08)'}
+                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239, 91, 91, 0.08)'}
                         onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -504,11 +504,11 @@ export function Header({ toggleSidebar }: HeaderProps) {
                 <p style={modalTextStyle}>No hay novedades recientes.</p>
               ) : (
                 news.map(item => (
-                  <div key={item.id} style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--border-color, rgba(255,255,255,0.05))' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--primary-color)', marginBottom: '0.25rem', fontWeight: 600 }}>
+                  <div key={item.id} style={{ padding: '1rem', background: 'var(--bg-input)', borderRadius: '8px', border: '1px solid var(--border-default)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--accent-gold)', marginBottom: '0.25rem', fontWeight: 600 }}>
                       {new Date(item.created_at).toLocaleDateString('es-CO')}
                     </div>
-                    <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)', fontSize: '1rem' }}>{item.title}</h4>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)', fontSize: '1rem' }}>{item.title}</h4>
                     <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5 }}>{item.content}</p>
                   </div>
                 ))
@@ -530,34 +530,34 @@ const modalOverlayStyle: React.CSSProperties = {
 };
 
 const modalContentStyle: React.CSSProperties = {
-  background: 'var(--card-bg, #1a1a2e)', border: '1px solid var(--border-color, rgba(255,255,255,0.1))',
+  background: 'var(--bg-card)', border: '1px solid var(--border-default)',
   borderRadius: '16px', padding: '2rem', width: '100%', maxWidth: '400px',
-  boxShadow: '0 20px 60px rgba(0,0,0,0.5)', textAlign: 'center', animation: 'slideDown 0.3s ease'
+  boxShadow: 'var(--shadow-lg)', textAlign: 'center', animation: 'slideDown 0.3s ease'
 };
 
-const modalTitleStyle: React.CSSProperties = { color: 'var(--text-color, #f0f0f5)', margin: '0 0 0.5rem', fontSize: '1.15rem' };
-const modalTextStyle: React.CSSProperties = { color: 'var(--text-secondary, #a0a0b0)', fontSize: '0.85rem', margin: '0 0 1.5rem', lineHeight: 1.5 };
+const modalTitleStyle: React.CSSProperties = { color: 'var(--text-primary)', margin: '0 0 0.5rem', fontSize: '1.15rem' };
+const modalTextStyle: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0 0 1.5rem', lineHeight: 1.5 };
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '0.75rem', borderRadius: '8px',
-  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
-  color: 'var(--text-color)', fontSize: '0.9rem', fontFamily: 'inherit'
+  background: 'var(--bg-input)', border: '1px solid var(--border-default)',
+  color: 'var(--text-primary)', fontSize: '0.9rem', fontFamily: 'inherit'
 };
 
 const btnSecondaryStyle: React.CSSProperties = {
   flex: 1, padding: '0.65rem', borderRadius: '8px',
-  background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-color, rgba(255,255,255,0.1))',
-  color: 'var(--text-color, #f0f0f5)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500, transition: 'all 0.2s'
+  background: 'var(--bg-tertiary)', border: '1px solid var(--border-default)',
+  color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500, transition: 'all 0.2s'
 };
 
 const btnPrimaryStyle: React.CSSProperties = {
   flex: 1, padding: '0.65rem', borderRadius: '8px',
-  background: 'var(--primary-color)', border: 'none',
+  background: 'var(--accent-gold)', border: 'none',
   color: 'white', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.2s'
 };
 
 const btnDangerStyle: React.CSSProperties = {
   flex: 1, padding: '0.65rem', borderRadius: '8px',
-  background: 'rgba(255, 77, 79, 0.15)', border: '1px solid rgba(255, 77, 79, 0.3)',
-  color: '#ff4d4f', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.2s'
+  background: 'rgba(239, 91, 91, 0.15)', border: '1px solid rgba(239, 91, 91, 0.3)',
+  color: 'var(--accent-red)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.2s'
 };
