@@ -100,7 +100,11 @@ export function Sidebar({ currentChatId, isOpen, toggleSidebar, onSelectChat, on
 
   return (
     <>
-      <div className={`chat-sidebar ${isOpen ? 'open' : ''}`} style={{
+      <div 
+        className={`sidebar-overlay ${isOpen ? 'is-open' : ''}`} 
+        onClick={toggleSidebar} 
+      />
+      <div className={`chat-sidebar mobile-sidebar ${isOpen ? 'is-open open' : ''}`} style={{
         width: isOpen ? '260px' : '68px',
         background: theme === 'dark' ? '#1e1f20' : '#f0f4f9',
         borderRight: 'none',
