@@ -65,9 +65,17 @@ export function generateIntegrityHash(
  */
 export const PRICING = {
   SINGLE_PACK_COP: 15000,
+  SINGLE_DISCOUNTED_COP: 8000,
   SUBSCRIPTION_COP: 70000,
   CURRENCY: 'COP',
 } as const;
+
+/**
+ * Daily download limit for subscribers (Fair Use Policy).
+ * Resets at midnight Colombia time (UTC-5) each calendar day.
+ * Admins and single-purchase owners are exempt.
+ */
+export const DAILY_DOWNLOAD_LIMIT = 30;
 
 /**
  * Convert COP amount to cents (Wompi uses centavos)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { google } from 'googleapis';
+import { DAILY_DOWNLOAD_LIMIT } from '@/lib/wompi';
 
 // No need for long duration — we just verify access and redirect
 export const maxDuration = 15;
@@ -8,9 +9,10 @@ export const maxDuration = 15;
 /**
  * GET /api/download/[resourceId]
  * 
- * Protected download endpoint.
- * Verifies user has access, then generates a temporary direct download URL
- * from Google Drive — the browser downloads directly from Google, not through Vercel.
+ * Protected download endpoint with Fair Use Policy.
+ * - Admins: unlimited downloads
+ * - Single purchase owners: always allowed for their purchased files
+ * - Subscribers: limited to DAILY_DOWNLOAD_LIMIT per calendar day (Colombia time)
  */
 export async function GET(
   req: NextRequest,
@@ -54,6 +56,60 @@ export async function GET(
         { error: 'No tienes acceso a este recurso. Cómpralo primero.', requirePurchase: true },
         { status: 403 }
       );
+    }
+
+    // ── Fair Use Policy: Daily Download Limit ──
+    // 1. Get user role
+    const { data: profile } = await serviceClient
+      .from('user_profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    const isAdmin = profile?.role === 'admin';
+
+    // 2. Check if this specific resource was purchased individually (single purchase)
+    const { data: singlePurchase } = await serviceClient
+      .from('purchases')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('resource_id', resourceId)
+      .eq('purchase_type', 'single')
+      .eq('status', 'approved')
+      .maybeSingle();
+
+    const hasSinglePurchase = !!singlePurchase;
+
+    // 3. If NOT admin and NOT a single-purchase owner → enforce daily limit
+    if (!isAdmin && !hasSinglePurchase) {
+      // Calculate start of today in Colombia time (UTC-5)
+      const now = new Date();
+      const colombiaOffset = -5 * 60; // UTC-5 in minutes
+      const localTime = new Date(now.getTime() + (colombiaOffset + now.getTimezoneOffset()) * 60000);
+      const startOfDay = new Date(localTime.getFullYear(), localTime.getMonth(), localTime.getDate());
+      // Convert back to UTC for the query
+      const startOfDayUTC = new Date(startOfDay.getTime() - (colombiaOffset + now.getTimezoneOffset()) * 60000);
+
+      const { count, error: countError } = await serviceClient
+        .from('downloads')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('downloaded_at', startOfDayUTC.toISOString());
+
+      if (countError) {
+        console.error('Download count error:', countError);
+        return NextResponse.json({ error: 'Error checking download limit' }, { status: 500 });
+      }
+
+      const todayCount = count || 0;
+
+      if (todayCount >= DAILY_DOWNLOAD_LIMIT) {
+        return NextResponse.json({
+          error: `Has alcanzado el límite de ${DAILY_DOWNLOAD_LIMIT} descargas diarias de tu suscripción. Tu límite se reiniciará mañana.`,
+          dailyLimitReached: true,
+          remainingToday: 0,
+        }, { status: 429 });
+      }
     }
 
     // Get the resource info

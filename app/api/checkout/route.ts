@@ -8,7 +8,7 @@ import { generatePaymentReference, generateIntegrityHash, PRICING, toCents } fro
  * Creates a pending purchase record and returns Wompi widget configuration.
  * Uses server-side auth session — no userId needed from client.
  * 
- * Body: { resourceId?: string, purchaseType: 'single' | 'subscription' }
+ * Body: { resourceId?: string, purchaseType: 'single' | 'subscription' | 'single_discounted' }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (purchaseType === 'single' && !resourceId) {
+    if ((purchaseType === 'single' || purchaseType === 'single_discounted') && !resourceId) {
       return NextResponse.json({ error: 'resourceId required for single purchase' }, { status: 400 });
     }
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     const supabase = createServiceRoleClient();
 
     // Check if already purchased (single only)
-    if (purchaseType === 'single' && resourceId) {
+    if ((purchaseType === 'single' || purchaseType === 'single_discounted') && resourceId) {
       const { data: existing } = await supabase
         .from('purchases')
         .select('id')
@@ -51,7 +51,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Determine amount
-    const amountCop = purchaseType === 'subscription' ? PRICING.SUBSCRIPTION_COP : PRICING.SINGLE_PACK_COP;
+    let amountCop: number;
+    if (purchaseType === 'subscription') {
+      amountCop = PRICING.SUBSCRIPTION_COP;
+    } else if (purchaseType === 'single_discounted') {
+      amountCop = PRICING.SINGLE_DISCOUNTED_COP;
+    } else {
+      amountCop = PRICING.SINGLE_PACK_COP;
+    }
     const amountCents = toCents(amountCop);
 
     // Generate payment reference
@@ -61,12 +68,15 @@ export async function POST(req: NextRequest) {
     const integrityHash = generateIntegrityHash(reference, amountCents);
 
     // Create pending purchase record
+    // For discounted purchases, store as 'single' so the access logic works seamlessly
+    const storedPurchaseType = purchaseType === 'single_discounted' ? 'single' : purchaseType;
+
     const { error: insertError } = await supabase.from('purchases').insert({
       user_id: userId,
-      resource_id: purchaseType === 'single' ? resourceId : null,
+      resource_id: (purchaseType === 'single' || purchaseType === 'single_discounted') ? resourceId : null,
       payment_ref: reference,
       amount_cop: amountCop,
-      purchase_type: purchaseType,
+      purchase_type: storedPurchaseType,
       status: 'pending',
     });
 

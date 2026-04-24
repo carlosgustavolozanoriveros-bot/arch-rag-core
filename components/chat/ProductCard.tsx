@@ -60,7 +60,7 @@ function formatTipoRecurso(tipo: string): string {
   return map[tipo] || tipo.replace(/_/g, ' ');
 }
 
-type CardState = 'idle' | 'loading' | 'checkout' | 'purchased' | 'subscriber';
+type CardState = 'idle' | 'loading' | 'checkout' | 'purchased' | 'subscriber' | 'daily_limit';
 
 export function ProductCard({ product, userRole, purchased = false, onRequireLogin }: ProductCardProps) {
   const [imgError, setImgError] = useState(false);
@@ -254,6 +254,13 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       
       if (!res.ok) {
         console.error('Download error:', data.error);
+        
+        // Handle daily limit reached
+        if (res.status === 429 && data.dailyLimitReached) {
+          setCardState('daily_limit');
+          return;
+        }
+        
         alert(data.error || 'Error al descargar el archivo');
         setCardState(isUserSubscriber ? 'subscriber' : (hasPurchased ? 'purchased' : 'idle'));
         return;
@@ -298,6 +305,44 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     triggerDownload(product.id);
   }, [product.id, triggerDownload]);
 
+  // Handle discounted purchase for subscribers who hit daily limit
+  const handleBuyDiscounted = useCallback(async () => {
+    if (!userId) return;
+
+    setCardState('loading');
+
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resourceId: product.id,
+          purchaseType: 'single_discounted',
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // If already purchased, just download it
+        if (data.alreadyPurchased) {
+          setHasPurchased(true);
+          triggerDownload(product.id);
+          return;
+        }
+        console.error('Discounted checkout error:', data.error);
+        setCardState('daily_limit');
+        return;
+      }
+
+      setCheckoutData(data);
+      setCardState('checkout');
+    } catch (error) {
+      console.error('Discounted buy error:', error);
+      setCardState('daily_limit');
+    }
+  }, [userId, product.id, triggerDownload]);
+
   // Listen for global subscription events so all cards update instantly
   useEffect(() => {
     const handleGlobalSub = () => {
@@ -338,8 +383,9 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
   }, [hasPurchased, isUserSubscriber]);
 
   // Determine which buttons to show
-  const showDownload = cardState === 'purchased' || cardState === 'subscriber' || hasPurchased;
-  const showBuyButtons = !showDownload && cardState !== 'loading';
+  const showDownload = (cardState === 'purchased' || cardState === 'subscriber' || hasPurchased) && cardState !== 'daily_limit';
+  const showDailyLimit = cardState === 'daily_limit';
+  const showBuyButtons = !showDownload && !showDailyLimit && cardState !== 'loading';
   const isLoading = cardState === 'loading';
 
   return (
@@ -391,6 +437,15 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
               <button className="product-card-download-btn" onClick={handleDownload}>
                 ⬇ Descargar
               </button>
+            ) : showDailyLimit ? (
+              <>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '6px', lineHeight: 1.3 }}>
+                  Límite diario alcanzado
+                </div>
+                <button className="product-card-buy-btn" onClick={handleBuyDiscounted} style={{ background: 'linear-gradient(135deg, #d4af37, #b8962e)' }}>
+                  ⬇ Descargar por $8.000
+                </button>
+              </>
             ) : isLoading ? (
               <button className="product-card-buy-btn" disabled>
                 Procesando...
