@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { WompiCheckout } from '../checkout/WompiCheckout';
 
@@ -69,6 +69,8 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
   const [isUserSubscriber, setIsUserSubscriber] = useState(false);
   const [checkoutData, setCheckoutData] = useState<any>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const isUserSubscriberRef = useRef(false);
+  const hasPurchasedRef = useRef(purchased);
 
   const thumbnailUrl = product.url_thumbnail ? toEmbeddableUrl(product.url_thumbnail) : null;
 
@@ -100,6 +102,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
       if (isSubscriber) {
         setIsUserSubscriber(true);
+        isUserSubscriberRef.current = true;
         setCardState('subscriber');
         return;
       }
@@ -116,7 +119,25 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
       if (existingPurchase) {
         setHasPurchased(true);
+        hasPurchasedRef.current = true;
         setCardState('purchased');
+        
+        // Check if there's a pending download intent (after Wompi redirect)
+        const downloadIntent = localStorage.getItem('aec_download_after_purchase');
+        if (downloadIntent) {
+          try {
+            const intent = JSON.parse(downloadIntent);
+            if (intent.productId === product.id && Date.now() - intent.timestamp < 300000) {
+              localStorage.removeItem('aec_download_after_purchase');
+              // Auto-download the just-purchased file
+              setTimeout(() => {
+                triggerDownload(product.id);
+              }, 1000);
+            }
+          } catch (e) {
+            localStorage.removeItem('aec_download_after_purchase');
+          }
+        }
       }
       // Check if there's a pending purchase intent for THIS product (after login redirect)
       const intentStr = localStorage.getItem('aec_purchase_intent');
@@ -262,7 +283,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         }
         
         alert(data.error || 'Error al descargar el archivo');
-        setCardState(isUserSubscriber ? 'subscriber' : (hasPurchased ? 'purchased' : 'idle'));
+        setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
         return;
       }
       
@@ -293,12 +314,12 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         // Clean up memory
         setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
       }
-      setCardState(isUserSubscriber ? 'subscriber' : (hasPurchased ? 'purchased' : 'idle'));
+      setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     } catch (err) {
       console.error('Failed to trigger download:', err);
-      setCardState(isUserSubscriber ? 'subscriber' : (hasPurchased ? 'purchased' : 'idle'));
+      setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     }
-  }, [hasPurchased, isUserSubscriber]);
+  }, [product.id]);
 
   // Handle download
   const handleDownload = useCallback(() => {
@@ -359,6 +380,13 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     
     setCardState('purchased');
     setHasPurchased(true);
+    hasPurchasedRef.current = true;
+    
+    // Save download intent — Wompi may redirect the page, destroying React state
+    localStorage.setItem('aec_download_after_purchase', JSON.stringify({
+      productId: product.id,
+      timestamp: Date.now(),
+    }));
     
     if (isSub) {
       window.dispatchEvent(new Event('subscription_purchased'));
@@ -373,14 +401,14 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
   const handleCheckoutError = useCallback((error: string) => {
     console.error('Payment error:', error);
-    setCardState(isUserSubscriber ? 'subscriber' : (hasPurchased ? 'purchased' : 'idle'));
+    setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     setCheckoutData(null);
-  }, [hasPurchased, isUserSubscriber]);
+  }, []);
 
   const handleCheckoutClose = useCallback(() => {
-    setCardState(isUserSubscriber ? 'subscriber' : (hasPurchased ? 'purchased' : 'idle'));
+    setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     setCheckoutData(null);
-  }, [hasPurchased, isUserSubscriber]);
+  }, []);
 
   // Determine which buttons to show
   const isDownloading = cardState === 'downloading';
