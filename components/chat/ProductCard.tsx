@@ -107,6 +107,29 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         return;
       }
 
+      // PRIORITY: Check if there's a pending download intent (after Wompi redirect)
+      // This fires BEFORE checking DB because the webhook may not have processed yet
+      const downloadIntent = localStorage.getItem('aec_download_after_purchase');
+      if (downloadIntent) {
+        try {
+          const intent = JSON.parse(downloadIntent);
+          if (intent.productId === product.id && Date.now() - intent.timestamp < 300000) {
+            localStorage.removeItem('aec_download_after_purchase');
+            // Trust the intent — show downloading state immediately
+            setHasPurchased(true);
+            hasPurchasedRef.current = true;
+            setCardState('downloading');
+            // Give the webhook a moment to process, then download
+            setTimeout(() => {
+              triggerDownload(product.id);
+            }, 2000);
+            return; // Skip other checks for this card
+          }
+        } catch (e) {
+          localStorage.removeItem('aec_download_after_purchase');
+        }
+      }
+
       // Check if already purchased this specific product
       const { data: existingPurchase } = await supabase
         .from('purchases')
@@ -121,23 +144,6 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         setHasPurchased(true);
         hasPurchasedRef.current = true;
         setCardState('purchased');
-        
-        // Check if there's a pending download intent (after Wompi redirect)
-        const downloadIntent = localStorage.getItem('aec_download_after_purchase');
-        if (downloadIntent) {
-          try {
-            const intent = JSON.parse(downloadIntent);
-            if (intent.productId === product.id && Date.now() - intent.timestamp < 300000) {
-              localStorage.removeItem('aec_download_after_purchase');
-              // Auto-download the just-purchased file
-              setTimeout(() => {
-                triggerDownload(product.id);
-              }, 1000);
-            }
-          } catch (e) {
-            localStorage.removeItem('aec_download_after_purchase');
-          }
-        }
       }
       // Check if there's a pending purchase intent for THIS product (after login redirect)
       const intentStr = localStorage.getItem('aec_purchase_intent');
