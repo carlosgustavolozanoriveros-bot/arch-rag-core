@@ -168,6 +168,11 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
                 if (res.ok) {
                   setCheckoutData(data);
                   setCardState('checkout');
+                  // Save download intent NOW — before Wompi can redirect
+                  localStorage.setItem('aec_download_after_purchase', JSON.stringify({
+                    productId: product.id,
+                    timestamp: Date.now(),
+                  }));
                 }
               } catch (e) {
                 console.error('Auto-checkout error:', e);
@@ -225,6 +230,11 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
       setCheckoutData(data);
       setCardState('checkout');
+      // Save download intent NOW — before Wompi can redirect the page
+      localStorage.setItem('aec_download_after_purchase', JSON.stringify({
+        productId: product.id,
+        timestamp: Date.now(),
+      }));
     } catch (error) {
       console.error('Buy error:', error);
       setCardState('idle');
@@ -320,6 +330,8 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         // Clean up memory
         setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
       }
+      // Clean up download intent after successful download
+      localStorage.removeItem('aec_download_after_purchase');
       setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     } catch (err) {
       console.error('Failed to trigger download:', err);
@@ -387,12 +399,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     setCardState('purchased');
     setHasPurchased(true);
     hasPurchasedRef.current = true;
-    
-    // Save download intent — Wompi may redirect the page, destroying React state
-    localStorage.setItem('aec_download_after_purchase', JSON.stringify({
-      productId: product.id,
-      timestamp: Date.now(),
-    }));
+    // Download intent was already saved before Wompi opened (survives redirect)
     
     if (isSub) {
       window.dispatchEvent(new Event('subscription_purchased'));
@@ -407,11 +414,15 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
   const handleCheckoutError = useCallback((error: string) => {
     console.error('Payment error:', error);
+    // Clean up download intent — payment failed
+    localStorage.removeItem('aec_download_after_purchase');
     setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     setCheckoutData(null);
   }, []);
 
   const handleCheckoutClose = useCallback(() => {
+    // Clean up download intent — user cancelled
+    localStorage.removeItem('aec_download_after_purchase');
     setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     setCheckoutData(null);
   }, []);
