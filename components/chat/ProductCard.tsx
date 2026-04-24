@@ -60,7 +60,7 @@ function formatTipoRecurso(tipo: string): string {
   return map[tipo] || tipo.replace(/_/g, ' ');
 }
 
-type CardState = 'idle' | 'loading' | 'checkout' | 'purchased' | 'subscriber' | 'daily_limit';
+type CardState = 'idle' | 'loading' | 'downloading' | 'checkout' | 'purchased' | 'subscriber' | 'daily_limit';
 
 export function ProductCard({ product, userRole, purchased = false, onRequireLogin }: ProductCardProps) {
   const [imgError, setImgError] = useState(false);
@@ -248,7 +248,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
   // Trigger download via direct URL
   const triggerDownload = useCallback(async (resourceId: string) => {
     try {
-      setCardState('loading');
+      setCardState('downloading');
       const res = await fetch(`/api/download/${resourceId}`);
       const data = await res.json();
       
@@ -383,10 +383,11 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
   }, [hasPurchased, isUserSubscriber]);
 
   // Determine which buttons to show
-  const showDownload = (cardState === 'purchased' || cardState === 'subscriber' || hasPurchased) && cardState !== 'daily_limit';
-  const showDailyLimit = cardState === 'daily_limit';
-  const showBuyButtons = !showDownload && !showDailyLimit && cardState !== 'loading';
+  const isDownloading = cardState === 'downloading';
   const isLoading = cardState === 'loading';
+  const showDownload = !isDownloading && !isLoading && (cardState === 'purchased' || cardState === 'subscriber' || hasPurchased) && cardState !== 'daily_limit';
+  const showDailyLimit = cardState === 'daily_limit';
+  const showBuyButtons = !showDownload && !showDailyLimit && !isLoading && !isDownloading;
 
   return (
     <>
@@ -433,7 +434,12 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
           )}
 
           <div className="product-card-footer">
-            {showDownload ? (
+            {isDownloading ? (
+              <button className="product-card-download-btn" disabled style={{ opacity: 0.8, cursor: 'wait' }}>
+                <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', marginRight: '6px' }}>⏳</span>
+                Descargando...
+              </button>
+            ) : showDownload ? (
               <button className="product-card-download-btn" onClick={handleDownload}>
                 ⬇ Descargar
               </button>
