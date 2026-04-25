@@ -71,6 +71,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
   const [userId, setUserId] = useState<string | null>(null);
   const isUserSubscriberRef = useRef(false);
   const hasPurchasedRef = useRef(purchased);
+  const downloadTriggeredRef = useRef(false);
 
   const thumbnailUrl = product.url_thumbnail ? toEmbeddableUrl(product.url_thumbnail) : null;
 
@@ -326,6 +327,9 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
   // Trigger download via direct URL
   const triggerDownload = useCallback(async (resourceId: string) => {
+    // Prevent duplicate downloads
+    if (downloadTriggeredRef.current) return;
+    downloadTriggeredRef.current = true;
     try {
       setCardState('downloading');
       const res = await fetch(`/api/download/${resourceId}`);
@@ -374,9 +378,11 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       }
       // Clean up download intent after successful download
       localStorage.removeItem('aec_pending_payment');
+      downloadTriggeredRef.current = false;
       setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     } catch (err) {
       console.error('Failed to trigger download:', err);
+      downloadTriggeredRef.current = false;
       setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     }
   }, [product.id]);
@@ -438,26 +444,23 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
   const handleCheckoutSuccess = useCallback(() => {
     const isSub = checkoutData?.purchaseType === 'subscription';
     
-    setCardState('downloading');
     setHasPurchased(true);
     hasPurchasedRef.current = true;
-    
-    // Save pending payment reference — survives Wompi page redirect
-    // On page reload, checkAccess will poll the DB until webhook confirms
-    localStorage.setItem('aec_pending_payment', JSON.stringify({
-      productId: product.id,
-      timestamp: Date.now(),
-    }));
+    // Remove pending payment so polling stops (we handle download here)
+    localStorage.removeItem('aec_pending_payment');
     
     if (isSub) {
       window.dispatchEvent(new Event('subscription_purchased'));
     }
     
     setCheckoutData(null);
-    // Auto-start download after successful payment
-    setTimeout(() => {
-      triggerDownload(product.id);
-    }, 500);
+    // Auto-start download only if polling hasn't already started one
+    if (!downloadTriggeredRef.current) {
+      setCardState('downloading');
+      setTimeout(() => {
+        triggerDownload(product.id);
+      }, 500);
+    }
   }, [product.id, triggerDownload, checkoutData]);
 
   const handleCheckoutError = useCallback((error: string) => {
