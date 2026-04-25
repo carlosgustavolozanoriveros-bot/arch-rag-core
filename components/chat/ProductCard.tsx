@@ -107,14 +107,14 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         return;
       }
 
-      // Check if there's a pending payment reference (after Wompi redirect + page reload)
-      // This polls the DB until the webhook confirms the payment
+      // Check if there's a pending payment (after Wompi redirect + page reload)
+      // This polls the DB until the webhook confirms — safe because it only reads DB, never downloads
       const pendingPayment = localStorage.getItem('aec_pending_payment');
       if (pendingPayment) {
         try {
           const payment = JSON.parse(pendingPayment);
           if (payment.productId === product.id && Date.now() - payment.timestamp < 300000) {
-            setCardState('loading'); // Show "Procesando..."
+            setCardState('loading'); // Show "Procesando pago..."
             
             // Poll purchase status until webhook confirms it
             const pollPurchase = async (retries: number) => {
@@ -133,25 +133,36 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
                 setHasPurchased(true);
                 hasPurchasedRef.current = true;
                 setCardState('downloading');
-                // Now download the file
                 triggerDownload(product.id);
                 return;
               }
               
               if (retries > 0) {
-                // Webhook hasn't processed yet, retry in 2s
                 setTimeout(() => pollPurchase(retries - 1), 2000);
               } else {
-                // Timeout — webhook might be slow, show download button anyway
+                // Timeout — check one more time if purchase exists (any status)
+                const { data: anyPurchase } = await supabase
+                  .from('purchases')
+                  .select('id, status')
+                  .eq('user_id', session.user.id)
+                  .eq('resource_id', product.id)
+                  .eq('purchase_type', 'single')
+                  .maybeSingle();
+                
                 localStorage.removeItem('aec_pending_payment');
-                setHasPurchased(true);
-                hasPurchasedRef.current = true;
-                setCardState('purchased');
+                if (anyPurchase && anyPurchase.status === 'approved') {
+                  setHasPurchased(true);
+                  hasPurchasedRef.current = true;
+                  setCardState('purchased');
+                } else {
+                  // User probably cancelled — reset to idle
+                  setCardState('idle');
+                }
               }
             };
             
-            // Start polling immediately, up to 10 retries (20 seconds total)
-            pollPurchase(10);
+            // Start polling, up to 15 retries (30 seconds total)
+            pollPurchase(15);
             return;
           } else {
             localStorage.removeItem('aec_pending_payment');
@@ -199,6 +210,11 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
                 if (res.ok) {
                   setCheckoutData(data);
                   setCardState('checkout');
+                  // Save BEFORE Wompi opens — survives page redirect
+                  localStorage.setItem('aec_pending_payment', JSON.stringify({
+                    productId: product.id,
+                    timestamp: Date.now(),
+                  }));
                 }
               } catch (e) {
                 console.error('Auto-checkout error:', e);
@@ -256,6 +272,11 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
       setCheckoutData(data);
       setCardState('checkout');
+      // Save BEFORE Wompi opens — survives page redirect
+      localStorage.setItem('aec_pending_payment', JSON.stringify({
+        productId: product.id,
+        timestamp: Date.now(),
+      }));
     } catch (error) {
       console.error('Buy error:', error);
       setCardState('idle');
