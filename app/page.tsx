@@ -31,15 +31,26 @@ export default function LandingPage() {
             Asistente IA para profesionales AEC
           </div>
           <h1 className="landing-h1">
-            Cursos, familias Revit, plantillas<br />
-            y recursos BIM<br />
-            <span className="landing-h1-gold">en un solo lugar</span>
+            Todos los recursos AEC<br />
+            <span className="landing-h1-gold">que tu proyecto necesita</span>
           </h1>
           <p className="landing-subtitle">
-            Dile a nuestro asistente qué necesitas y te encontrará el recurso ideal:
-            cursos de Revit, familias paramátricas, librerías de D5 Render,
-            plantillas de proyecto, bloques AutoCAD y mucho más.
+            Cursos, familias Revit, bloques AutoCAD, escenas D5 Render, assets de visualización,
+            plantillas de proyecto, materiales, modelos 3D y mucho más.
+            Dile al asistente qué buscas y lo encuentra por ti.
           </p>
+          <div className="landing-tags">
+            <span className="landing-tag">Familias Revit</span>
+            <span className="landing-tag">Cursos</span>
+            <span className="landing-tag">Bloques AutoCAD</span>
+            <span className="landing-tag">Escenas D5</span>
+            <span className="landing-tag">Assets 3D</span>
+            <span className="landing-tag">Plantillas</span>
+            <span className="landing-tag">Materiales</span>
+            <span className="landing-tag">Renders</span>
+            <span className="landing-tag">Modelado BIM</span>
+            <span className="landing-tag">Visualización</span>
+          </div>
           <div className="landing-hero-actions">
             <Link href="/chat" className="landing-btn-primary">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
