@@ -82,7 +82,7 @@ export function WompiCheckout({
         signature: {
           integrity: integrityHash,
         },
-        redirectUrl: `${window.location.origin}`,
+        redirectUrl: `${window.location.origin}/chat`,
         customerData: customerEmail ? {
           email: customerEmail,
         } : undefined,
