@@ -100,38 +100,54 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         (profile.role === 'subscriber' && profile.subscription_expires_at && new Date(profile.subscription_expires_at) > new Date())
       );
 
-      if (isSubscriber) {
-        setIsUserSubscriber(true);
-        isUserSubscriberRef.current = true;
-        setCardState('subscriber');
-        return;
-      }
-
-      // Check if there's a pending payment (after Wompi redirect + page reload)
-      // This polls the DB until the webhook confirms — safe because it only reads DB, never downloads
+      // PRIORITY: Check pending payment FIRST (after Wompi redirect + page reload)
+      // Must run before subscriber check so the auto-download card shows "Descargando..."
       const pendingPayment = localStorage.getItem('aec_pending_payment');
       if (pendingPayment) {
         try {
           const payment = JSON.parse(pendingPayment);
           if (payment.productId === product.id && Date.now() - payment.timestamp < 300000) {
             setCardState('loading'); // Show "Procesando pago..."
+            const purchaseType = payment.purchaseType || 'single';
             
-            // Poll purchase status until webhook confirms it
+            // Poll until webhook confirms the payment
             const pollPurchase = async (retries: number) => {
-              const { data: purchase } = await supabase
-                .from('purchases')
-                .select('id, status')
-                .eq('user_id', session.user.id)
-                .eq('resource_id', product.id)
-                .eq('purchase_type', 'single')
-                .eq('status', 'approved')
-                .maybeSingle();
+              let confirmed = false;
               
-              if (purchase) {
-                // Payment confirmed by webhook!
+              if (purchaseType === 'subscription') {
+                // For subscriptions, check if user role became 'subscriber'
+                const { data: freshProfile } = await supabase
+                  .from('user_profiles')
+                  .select('role, subscription_expires_at')
+                  .eq('id', session.user.id)
+                  .single();
+                confirmed = freshProfile && (
+                  freshProfile.role === 'admin' ||
+                  (freshProfile.role === 'subscriber' && freshProfile.subscription_expires_at && new Date(freshProfile.subscription_expires_at) > new Date())
+                );
+                if (confirmed) {
+                  setIsUserSubscriber(true);
+                  isUserSubscriberRef.current = true;
+                }
+              } else {
+                // For single purchases, check purchases table
+                const { data: purchase } = await supabase
+                  .from('purchases')
+                  .select('id, status')
+                  .eq('user_id', session.user.id)
+                  .eq('resource_id', product.id)
+                  .eq('purchase_type', 'single')
+                  .eq('status', 'approved')
+                  .maybeSingle();
+                confirmed = !!purchase;
+                if (confirmed) {
+                  setHasPurchased(true);
+                  hasPurchasedRef.current = true;
+                }
+              }
+              
+              if (confirmed) {
                 localStorage.removeItem('aec_pending_payment');
-                setHasPurchased(true);
-                hasPurchasedRef.current = true;
                 setCardState('downloading');
                 triggerDownload(product.id);
                 return;
@@ -140,22 +156,13 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
               if (retries > 0) {
                 setTimeout(() => pollPurchase(retries - 1), 2000);
               } else {
-                // Timeout — check one more time if purchase exists (any status)
-                const { data: anyPurchase } = await supabase
-                  .from('purchases')
-                  .select('id, status')
-                  .eq('user_id', session.user.id)
-                  .eq('resource_id', product.id)
-                  .eq('purchase_type', 'single')
-                  .maybeSingle();
-                
+                // Timeout
                 localStorage.removeItem('aec_pending_payment');
-                if (anyPurchase && anyPurchase.status === 'approved') {
-                  setHasPurchased(true);
-                  hasPurchasedRef.current = true;
-                  setCardState('purchased');
+                if (isSubscriber) {
+                  setIsUserSubscriber(true);
+                  isUserSubscriberRef.current = true;
+                  setCardState('subscriber');
                 } else {
-                  // User probably cancelled — reset to idle
                   setCardState('idle');
                 }
               }
@@ -170,6 +177,14 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         } catch (e) {
           localStorage.removeItem('aec_pending_payment');
         }
+      }
+
+      // Subscriber check (only runs if no pending payment)
+      if (isSubscriber) {
+        setIsUserSubscriber(true);
+        isUserSubscriberRef.current = true;
+        setCardState('subscriber');
+        return;
       }
 
       // Check if already purchased this specific product
@@ -213,6 +228,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
                   // Save BEFORE Wompi opens — survives page redirect
                   localStorage.setItem('aec_pending_payment', JSON.stringify({
                     productId: product.id,
+                    purchaseType: intent.purchaseType || 'single',
                     timestamp: Date.now(),
                   }));
                 }
@@ -275,6 +291,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       // Save BEFORE Wompi opens — survives page redirect
       localStorage.setItem('aec_pending_payment', JSON.stringify({
         productId: product.id,
+        purchaseType: 'single',
         timestamp: Date.now(),
       }));
     } catch (error) {
@@ -318,6 +335,12 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
       setCheckoutData(data);
       setCardState('checkout');
+      // Save BEFORE Wompi opens — survives page redirect
+      localStorage.setItem('aec_pending_payment', JSON.stringify({
+        productId: product.id,
+        purchaseType: 'subscription',
+        timestamp: Date.now(),
+      }));
     } catch (error) {
       console.error('Subscribe error:', error);
       setCardState('idle');
