@@ -81,24 +81,24 @@ export default function LandingPage() {
           <h2 className="landing-h2">Buscar recursos no debería ser un dolor de cabeza</h2>
           <div className="landing-pain-grid">
             <div className="landing-pain-card">
-              <div className="landing-pain-icon">😩</div>
-              <p>Pasas <strong>horas buscando familias o modelos 3D</strong> en foros gratuitos y terminas descargando archivos que están rotos o mal modelados.</p>
+              <div className="landing-pain-icon">🗂️</div>
+              <p>¿Luchas contra gigas de <strong>archivos desorganizados</strong>? Pierdes horas tratando de recordar en qué carpeta guardaste ese modelo o familia que necesitas.</p>
             </div>
             <div className="landing-pain-card">
               <div className="landing-pain-icon">🔍</div>
-              <p>Incluso en páginas de pago, tienes que poner palabras clave exactas, <strong>pasar página tras página</strong> y ver resultados que no encajan.</p>
+              <p>En páginas de catálogos tienes que poner palabras clave exactas, <strong>pasar página tras página</strong> y conformarte con resultados genéricos que no encajan.</p>
             </div>
             <div className="landing-pain-card">
               <div className="landing-pain-icon">⏳</div>
-              <p>El tiempo apremia en la entrega de tu proyecto y <strong>perder tiempo buscando</strong> te obliga a empezar desde cero por no hallar la solución correcta.</p>
+              <p>El tiempo apremia en la entrega de tu proyecto y <strong>perder tiempo buscando</strong> te obliga a modelar desde cero, retrasando tu trabajo.</p>
             </div>
             <div className="landing-pain-card">
               <div className="landing-pain-icon">🤖</div>
-              <p>Preguntarle a buscadores genéricos es frustrante porque <strong>no entienden de arquitectura, ingeniería ni términos técnicos.</strong></p>
+              <p>Preguntarle a buscadores tradicionales es frustrante porque <strong>no entienden de arquitectura, ingeniería ni términos técnicos.</strong></p>
             </div>
           </div>
           <p className="landing-pain-conclusion">
-            Imagina pedir un recurso con tus propias palabras y que alguien experto te lo entregue al instante.
+            Imagina pedir un recurso con tus propias palabras y que un experto te entregue opciones premium al instante.
           </p>
         </div>
       </section>
