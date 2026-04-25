@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function LandingPage() {
   return (
@@ -19,7 +20,7 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* ===== 1. HERO — El gancho ===== */}
       <section className="landing-hero">
         <div className="landing-hero-bg">
           <div className="landing-hero-glow" />
@@ -31,23 +32,21 @@ export default function LandingPage() {
             Asistente IA para profesionales AEC
           </div>
           <h1 className="landing-h1">
-            Todos los recursos AEC<br />
-            <span className="landing-h1-gold">que tu proyecto necesita</span>
+            Deja de perder horas<br />
+            <span className="landing-h1-gold">buscando recursos AEC</span>
           </h1>
           <p className="landing-subtitle">
-            Cursos, familias Revit, bloques AutoCAD, escenas D5 Render, assets de visualización,
-            plantillas de proyecto, materiales, modelos 3D y mucho más.
-            Dile al asistente qué buscas y lo encuentra por ti.
+            Cursos, familias Revit, bloques AutoCAD, escenas D5 Render, plantillas,
+            materiales, modelos 3D — pregúntale al asistente y descárgalo al instante.
           </p>
           <div className="landing-tags">
             <span className="landing-tag">Familias Revit</span>
-            <span className="landing-tag">Cursos</span>
+            <span className="landing-tag">+90 Cursos</span>
             <span className="landing-tag">Bloques AutoCAD</span>
             <span className="landing-tag">Escenas D5</span>
             <span className="landing-tag">Assets 3D</span>
             <span className="landing-tag">Plantillas</span>
             <span className="landing-tag">Materiales</span>
-            <span className="landing-tag">Renders</span>
             <span className="landing-tag">Modelado BIM</span>
             <span className="landing-tag">Visualización</span>
           </div>
@@ -56,7 +55,7 @@ export default function LandingPage() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
-              Hablar con el asistente
+              Hablar con el asistente — Es gratis
             </Link>
           </div>
           <div className="landing-hero-stats">
@@ -78,74 +77,129 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* What you'll find */}
+      {/* ===== 2. DOLOR — ¿Te suena familiar? ===== */}
       <section className="landing-section">
         <div className="landing-container">
-          <h2 className="landing-h2">Todo lo que un profesional AEC necesita</h2>
-          <p className="landing-section-sub">
-            No pierdas tiempo buscando en internet. Aquí está todo organizado y listo para descargar.
-          </p>
-          <div className="landing-features-grid">
-            <div className="landing-feature-card">
-              <div className="landing-feature-icon">🎓</div>
-              <h3>Cursos especializados</h3>
-              <p>Más de 90 cursos de Revit, AutoCAD, Civil 3D, ETABS, CYPE, Dynamo, Navisworks, Photoshop, Illustrator y más.</p>
+          <h2 className="landing-h2">¿Te suena familiar?</h2>
+          <div className="landing-pain-grid">
+            <div className="landing-pain-card">
+              <div className="landing-pain-icon">😩</div>
+              <p>Pasas <strong>horas buscando</strong> familias de Revit en foros, blogs y páginas que ni conoces</p>
             </div>
-            <div className="landing-feature-card">
-              <div className="landing-feature-icon">🏗️</div>
-              <h3>Familias Revit paramátricas</h3>
-              <p>Puertas, ventanas, mobiliario, accesorios de baño, iluminación, elementos estructurales — todo editable y listo para tus proyectos.</p>
+            <div className="landing-pain-card">
+              <div className="landing-pain-icon">💔</div>
+              <p>Descargas archivos que <strong>no sirven</strong>, están incompletos o son de versiones antiguas</p>
             </div>
-            <div className="landing-feature-card">
-              <div className="landing-feature-icon">🎨</div>
-              <h3>Librerías D5 Render</h3>
-              <p>Materiales, vegetación, mobiliario y assets para crear renders fotorrealistas de tus proyectos arquitectónicos.</p>
+            <div className="landing-pain-card">
+              <div className="landing-pain-icon">🔍</div>
+              <p>No encuentras <strong>cursos actualizados en español</strong> para el software que necesitas</p>
             </div>
-            <div className="landing-feature-card">
-              <div className="landing-feature-icon">📐</div>
-              <h3>Plantillas y bloques</h3>
-              <p>Plantillas de proyecto, hojas de título, bloques AutoCAD y configuraciones predefinidas para acelerar tu trabajo.</p>
+            <div className="landing-pain-card">
+              <div className="landing-pain-icon">🔄</div>
+              <p>Cada proyecto <strong>empiezas de cero</strong> porque no tienes una librería organizada</p>
             </div>
           </div>
+          <p className="landing-pain-conclusion">
+            Si dijiste &quot;sí&quot; a alguno, este asistente se hizo para ti.
+          </p>
         </div>
       </section>
 
-      {/* Why the assistant */}
+      {/* ===== 3. SOLUCIÓN — Nosotros lo resolvimos ===== */}
       <section className="landing-section landing-section-alt">
         <div className="landing-container">
-          <h2 className="landing-h2">¿Por qué usar nuestro asistente?</h2>
+          <h2 className="landing-h2">Un solo lugar. Todo lo que necesitas.</h2>
           <p className="landing-section-sub">
-            Porque buscar recursos no debería tomar horas.
+            Dejamos de buscar en 20 páginas diferentes. Ahora todo está aquí.
           </p>
-          <div className="landing-why-grid">
-            <div className="landing-why-card">
-              <div className="landing-why-number">01</div>
-              <h3>Búsqueda inteligente</h3>
-              <p>No necesitas saber el nombre exacto. Escribe &quot;necesito familias de puertas corredizas para Revit&quot; y la IA entiende lo que buscas.</p>
+          <div className="landing-solution-grid">
+            <div className="landing-solution-item">
+              <div className="landing-solution-check">✓</div>
+              <div>
+                <h4>Catálogo centralizado</h4>
+                <p>Cursos, familias, bloques, assets, escenas y plantillas — todo curado y organizado en un solo lugar.</p>
+              </div>
             </div>
-            <div className="landing-why-card">
-              <div className="landing-why-number">02</div>
-              <h3>Todo en un catálogo</h3>
-              <p>Cursos, familias, plantillas, bloques, librerías de render — no saltes entre 20 páginas. Todo está aquí, curado y organizado.</p>
+            <div className="landing-solution-item">
+              <div className="landing-solution-check">✓</div>
+              <div>
+                <h4>IA que entiende lo que buscas</h4>
+                <p>No necesitas saber el nombre exacto. Escribe &quot;familias de puertas corredizas&quot; y la IA lo encuentra.</p>
+              </div>
             </div>
-            <div className="landing-why-card">
-              <div className="landing-why-number">03</div>
-              <h3>Descarga inmediata</h3>
-              <p>Encuentras lo que necesitas, lo compras y lo descargas al instante. Sin esperas, sin formularios, directo a tu proyecto.</p>
+            <div className="landing-solution-item">
+              <div className="landing-solution-check">✓</div>
+              <div>
+                <h4>Descarga al instante</h4>
+                <p>Compra y descarga en segundos. Sin formularios, sin esperas. Directo a tu proyecto.</p>
+              </div>
             </div>
-            <div className="landing-why-card">
-              <div className="landing-why-number">04</div>
-              <h3>Contenido profesional</h3>
-              <p>Cada recurso fue creado por profesionales AEC activos. No son archivos genéricos — son herramientas reales para proyectos reales.</p>
+            <div className="landing-solution-item">
+              <div className="landing-solution-check">✓</div>
+              <div>
+                <h4>Contenido profesional real</h4>
+                <p>Creado por profesionales AEC activos. No son archivos genéricos — son herramientas para proyectos reales.</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* How it works */}
+      {/* ===== 4. CATÁLOGO — Mira todo lo que hay ===== */}
       <section className="landing-section">
         <div className="landing-container">
+          <h2 className="landing-h2">Mira todo lo que vas a encontrar</h2>
+          <p className="landing-section-sub">
+            Más de 500 recursos profesionales listos para usar.
+          </p>
+          <div className="landing-catalog-grid">
+            <div className="landing-catalog-card">
+              <div className="landing-catalog-icon">🎓</div>
+              <h3>Mega Pack +90 Cursos</h3>
+              <p>Revit, AutoCAD, Civil 3D, ETABS, CYPE, Dynamo, Navisworks, Photoshop, Illustrator y muchos más.</p>
+              <span className="landing-catalog-tag">Aprendizaje</span>
+            </div>
+            <div className="landing-catalog-card">
+              <div className="landing-catalog-icon">🏗️</div>
+              <h3>Familias Revit</h3>
+              <p>Puertas, ventanas, mobiliario, baños, iluminación, elementos estructurales — todo paramétrico y editable.</p>
+              <span className="landing-catalog-tag">Modelado</span>
+            </div>
+            <div className="landing-catalog-card">
+              <div className="landing-catalog-icon">🎨</div>
+              <h3>Escenas y Assets D5</h3>
+              <p>Materiales, vegetación, mobiliario y escenas completas para renders fotorrealistas.</p>
+              <span className="landing-catalog-tag">Renderizado</span>
+            </div>
+            <div className="landing-catalog-card">
+              <div className="landing-catalog-icon">📐</div>
+              <h3>Plantillas de proyecto</h3>
+              <p>Plantillas Revit, hojas de título, configuraciones predefinidas para empezar proyectos en minutos.</p>
+              <span className="landing-catalog-tag">Productividad</span>
+            </div>
+            <div className="landing-catalog-card">
+              <div className="landing-catalog-icon">✏️</div>
+              <h3>Bloques AutoCAD</h3>
+              <p>Bloques 2D y 3D organizados por categoría: arquitectura, mobiliario, instalaciones, detalles constructivos.</p>
+              <span className="landing-catalog-tag">Documentación</span>
+            </div>
+            <div className="landing-catalog-card">
+              <div className="landing-catalog-icon">🧩</div>
+              <h3>Packs temáticos</h3>
+              <p>Conjuntos completos para proyectos residenciales, comerciales, estructurales e institucionales.</p>
+              <span className="landing-catalog-tag">Paquetes</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== 5. CÓMO FUNCIONA — 3 pasos ===== */}
+      <section className="landing-section landing-section-alt">
+        <div className="landing-container">
           <h2 className="landing-h2">Así de fácil funciona</h2>
+          <p className="landing-section-sub">
+            Sin complicaciones. Sin registro obligatorio.
+          </p>
           <div className="landing-steps">
             <div className="landing-step">
               <div className="landing-step-number">1</div>
@@ -156,55 +210,87 @@ export default function LandingPage() {
             <div className="landing-step">
               <div className="landing-step-number">2</div>
               <h3>Encuentra</h3>
-              <p>La IA analiza tu consulta y te muestra los recursos más relevantes de nuestro catálogo.</p>
+              <p>La IA analiza tu consulta y te muestra los recursos más relevantes con vista previa.</p>
             </div>
             <div className="landing-step-arrow">→</div>
             <div className="landing-step">
               <div className="landing-step-number">3</div>
               <h3>Descarga</h3>
-              <p>Selecciona el recurso, cómpralo y descárgalo al instante. Listo para usar en tu proyecto.</p>
+              <p>Selecciona, compra y descárgalo al instante. Listo para usar en tu proyecto.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Social proof */}
-      <section className="landing-section landing-section-alt">
+      {/* ===== 6. PARA QUIÉN — Esto es para ti ===== */}
+      <section className="landing-section">
         <div className="landing-container">
-          <h2 className="landing-h2">Hecho por profesionales, para profesionales</h2>
+          <h2 className="landing-h2">¿Para quién es esto?</h2>
+          <p className="landing-section-sub">
+            Si trabajas o estudias en el mundo AEC, esto es para ti.
+          </p>
           <div className="landing-trust-grid">
             <div className="landing-trust-item">
               <div className="landing-trust-icon">🏛️</div>
-              <h4>Arquitectura</h4>
-              <p>Familias de diseño, materiales, renders, plantillas de presentación</p>
+              <h4>Arquitectos</h4>
+              <p>Familias de diseño, materiales, renders, plantillas de presentación, escenas D5</p>
             </div>
             <div className="landing-trust-item">
               <div className="landing-trust-icon">⚙️</div>
-              <h4>Ingeniería</h4>
-              <p>Modelos estructurales, MEP, Civil 3D, cálculos, plantillas técnicas</p>
+              <h4>Ingenieros</h4>
+              <p>Modelos estructurales, MEP, Civil 3D, ETABS, CYPE, cálculos y plantillas técnicas</p>
             </div>
             <div className="landing-trust-item">
-              <div className="landing-trust-icon">🔨</div>
-              <h4>Construcción</h4>
-              <p>Planificación, presupuestos, programación de obra, documentación</p>
+              <div className="landing-trust-icon">📚</div>
+              <h4>Estudiantes</h4>
+              <p>+90 cursos completos, plantillas base, bloques, familias para aprender desde cero</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Final */}
+      {/* ===== 7. DEMO — Mira cómo funciona ===== */}
+      <section className="landing-section landing-section-alt">
+        <div className="landing-container">
+          <h2 className="landing-h2">Mira cómo funciona</h2>
+          <p className="landing-section-sub">
+            Así se ve una conversación real con el asistente.
+          </p>
+          <div className="landing-demo-wrapper">
+            <Image
+              src="/chat-preview.png"
+              alt="Vista previa del asistente AEC mostrando una conversación con resultados de recursos BIM"
+              width={900}
+              height={560}
+              className="landing-demo-image"
+              priority={false}
+            />
+            <div className="landing-demo-overlay">
+              <Link href="/chat" className="landing-btn-primary">
+                Probar ahora — Es gratis
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== 8. CTA FINAL — Cierre ===== */}
       <section className="landing-cta-section">
         <div className="landing-container">
           <div className="landing-cta-box">
-            <h2 className="landing-h2" style={{ marginBottom: '12px' }}>Deja de buscar. Empieza a encontrar.</h2>
-            <p className="landing-section-sub" style={{ marginBottom: '32px' }}>
-              Consultar con el asistente es gratis. Escríbele lo que necesitas y descubre todo lo que tenemos para ti.
+            <h2 className="landing-cta-title">
+              Cada minuto buscando es un minuto<br />
+              <span className="landing-h1-gold">que no estás diseñando</span>
+            </h2>
+            <p className="landing-cta-sub">
+              Consultar con el asistente es gratis. Sin registro obligatorio, sin compromiso.<br />
+              Escríbele lo que necesitas y descubre todo lo que tenemos para ti.
             </p>
-            <Link href="/chat" className="landing-btn-primary">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <Link href="/chat" className="landing-btn-primary landing-btn-lg">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
-              Hablar con el asistente
+              Empezar ahora
             </Link>
           </div>
         </div>

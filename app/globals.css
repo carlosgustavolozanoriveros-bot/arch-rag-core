@@ -1878,3 +1878,225 @@ body:has([class*="waybox"]) {
   filter: blur(40px);
   pointer-events: none;
 }
+
+/* Pain Section */
+.landing-pain-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  max-width: 800px;
+  margin: 0 auto 28px;
+}
+
+.landing-pain-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--accent-red);
+}
+
+.landing-pain-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.landing-pain-card p {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.landing-pain-card strong {
+  color: var(--text-primary);
+}
+
+.landing-pain-conclusion {
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--accent-gold);
+}
+
+/* Solution Section */
+.landing-solution-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.landing-solution-item {
+  display: flex;
+  gap: 14px;
+  padding: 22px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-base);
+}
+
+.landing-solution-item:hover {
+  border-color: var(--border-gold);
+}
+
+.landing-solution-check {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-gold);
+  color: #0a0a0f;
+  font-weight: 800;
+  font-size: 0.85rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.landing-solution-item h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.landing-solution-item p {
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* Catalog Section */
+.landing-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.landing-catalog-card {
+  padding: 24px;
+  background: var(--gradient-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+  position: relative;
+}
+
+.landing-catalog-card:hover {
+  border-color: var(--border-gold);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-glow);
+}
+
+.landing-catalog-icon {
+  font-size: 2rem;
+  margin-bottom: 12px;
+}
+
+.landing-catalog-card h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+
+.landing-catalog-card p {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.landing-catalog-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  background: rgba(200, 169, 126, 0.1);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Demo Section */
+.landing-demo-wrapper {
+  position: relative;
+  max-width: 900px;
+  margin: 0 auto;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-lg), 0 0 60px rgba(200, 169, 126, 0.06);
+}
+
+.landing-demo-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.landing-demo-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 15, 0.5);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.landing-demo-wrapper:hover .landing-demo-overlay {
+  opacity: 1;
+}
+
+/* CTA Improved */
+.landing-cta-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  margin-bottom: 16px;
+}
+
+.landing-cta-sub {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+}
+
+.landing-btn-lg {
+  padding: 16px 36px;
+  font-size: 1.05rem;
+}
+
+/* ---- Landing V3 Responsive ---- */
+@media (max-width: 768px) {
+  .landing-pain-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-solution-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-catalog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-cta-box {
+    padding: 40px 24px;
+  }
+
+  .landing-cta-title {
+    font-size: 1.4rem;
+  }
+}
