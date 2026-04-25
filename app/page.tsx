@@ -128,6 +128,40 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ===== 2.1 VERSUS — Antes y después ===== */}
+      <section className="landing-section landing-section-alt">
+        <div className="landing-container">
+          <h2 className="landing-h2">La diferencia: Antes y después</h2>
+          <div className="versus-grid">
+            <div className="vs-card bad">
+              <div className="vs-card-head">
+                <div className="vs-badge bad">Sin el asistente</div>
+              </div>
+              <ul className="vs-list">
+                <li>Abres 4 plataformas distintas y comparas resultados manualmente</li>
+                <li>Lees fichas técnicas completas para entender si el archivo sirve</li>
+                <li>Descargas, abres, compruebas la compatibilidad, y muchas veces vuelves atrás</li>
+                <li>Guardas el archivo en alguna carpeta sin nombre que no vas a encontrar luego</li>
+                <li>Cuando termina el proyecto, empiezas el mismo proceso desde cero</li>
+              </ul>
+            </div>
+            <div className="vs-card good">
+              <div className="vs-card-head">
+                <div className="vs-badge good">Con Asistente</div>
+              </div>
+              <ul className="vs-list">
+                <li>Escribes lo que necesitas exactamente como se lo dirías a un colega</li>
+                <li>El asistente entiende el contexto técnico del proyecto y filtra por ti</li>
+                <li>Recibes las mejores opciones curadas — sin ruido, sin scroll</li>
+                <li>Revisas, compras y descargas sin salir del chat</li>
+                <li>Historial organizado automáticamente — lo que buscaste hoy sigue ahí mañana</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
       {/* ===== 3. SOLUCIÓN — Nosotros lo resolvimos ===== */}
       <section className="landing-section landing-section-alt">
         <div className="landing-container">
@@ -245,6 +279,39 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ===== 5.1 FEATURES — Plataforma completa ===== */}
+      <section className="landing-section">
+        <div className="landing-container">
+          <h2 className="landing-h2">Todo lo que necesitas, integrado en un chat</h2>
+          <p className="landing-section-sub">
+            Una plataforma completa que evoluciona contigo.
+          </p>
+          <div className="feat-grid">
+            <div className="feat">
+              <div className="feat-icon">💬</div>
+              <div className="feat-t">Historial siempre disponible</div>
+              <p className="feat-d">Cada búsqueda queda guardada automáticamente. Retoma cualquier proyecto exactamente donde lo dejaste — sin volver a buscar lo que ya encontraste.</p>
+            </div>
+            <div className="feat">
+              <div className="feat-icon">📥</div>
+              <div className="feat-t">Buzón de solicitudes</div>
+              <p className="feat-d">¿No encontraste el recurso exacto? Lo pides directamente y el equipo lo consigue o lo crea. Nunca te quedas sin salida.</p>
+            </div>
+            <div className="feat">
+              <div className="feat-icon">🎓</div>
+              <div className="feat-t">Cursos y formación incluidos</div>
+              <p className="feat-d">Además de recursos, accede a cursos especializados de los programas líderes del sector. Aprende y descarga desde el mismo lugar.</p>
+            </div>
+            <div className="feat">
+              <div className="feat-icon">🔔</div>
+              <div className="feat-t">Alertas de nuevos recursos</div>
+              <p className="feat-d">Cada vez que se sube una colección nueva al catálogo, recibes una notificación. Siempre al día con las herramientas más actuales.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
       {/* ===== 6. PARA QUIÉN — Esto es para ti ===== */}
       <section className="landing-section">
         <div className="landing-container">
@@ -292,6 +359,48 @@ export default function LandingPage() {
               <Link href="/chat" className="landing-btn-primary">
                 Interactuar con el Asistente
               </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== 7.1 SOCIAL PROOF — Testimonios ===== */}
+      <section className="landing-section">
+        <div className="landing-container">
+          <h2 className="landing-h2">Profesionales reales, tiempo recuperado</h2>
+          <div className="proof-grid">
+            <div className="proof-card">
+              <div className="proof-stars">★★★★★</div>
+              <p className="proof-text">&quot;Lo que antes me tomaba 40 minutos buscando en tres plataformas distintas ahora lo resuelvo en un mensaje. El asistente entiende exactamente de qué le hablo.&quot;</p>
+              <div className="proof-author">
+                <div className="proof-av">CR</div>
+                <div>
+                  <div className="proof-name">Carlos R.</div>
+                  <div className="proof-role">Arquitecto BIM · Estudio Propio</div>
+                </div>
+              </div>
+            </div>
+            <div className="proof-card">
+              <div className="proof-stars">★★★★★</div>
+              <p className="proof-text">&quot;Nuestro equipo lo usa a diario. La calidad de los recursos es otra categoría — nada que ver con lo que encuentras gratis o en catálogos genéricos.&quot;</p>
+              <div className="proof-author">
+                <div className="proof-av">ML</div>
+                <div>
+                  <div className="proof-name">María L.</div>
+                  <div className="proof-role">Directora de Diseño · Constructora</div>
+                </div>
+              </div>
+            </div>
+            <div className="proof-card">
+              <div className="proof-stars">★★★★★</div>
+              <p className="proof-text">&quot;Como estudiante no tenía acceso a recursos premium. Esto me pone al nivel de los profesionales sin tener que navegar veinte páginas distintas.&quot;</p>
+              <div className="proof-author">
+                <div className="proof-av">DS</div>
+                <div>
+                  <div className="proof-name">Diego S.</div>
+                  <div className="proof-role">Estudiante · Arquitectura 5to año</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

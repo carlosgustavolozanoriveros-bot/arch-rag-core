@@ -2104,6 +2104,201 @@ body:has([class*="waybox"]) {
   font-size: 1.05rem;
 }
 
+/* ---- NEW SECTIONS (Versus, Features, Proof) ---- */
+
+/* VERSUS SECTION */
+.versus-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+.vs-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+}
+
+.vs-card.bad {
+  opacity: 0.85;
+}
+
+.vs-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.vs-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-sm);
+}
+
+.vs-badge.bad {
+  background: rgba(255, 95, 87, 0.1);
+  color: #FF5F57;
+  border: 1px solid rgba(255, 95, 87, 0.2);
+}
+
+.vs-badge.good {
+  background: rgba(200, 169, 126, 0.1);
+  color: var(--accent-gold);
+  border: 1px solid rgba(200, 169, 126, 0.2);
+}
+
+.vs-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 0;
+}
+
+.vs-list li {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  line-height: 1.55;
+}
+
+.vs-list li::before {
+  content: '';
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  margin-top: 2px;
+  background-size: cover;
+}
+
+.vs-card.bad .vs-list li::before {
+  background-color: rgba(255, 95, 87, 0.1);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 14 14' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 3l8 8M11 3L3 11' stroke='%23FF5F57' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.vs-card.good .vs-list li::before {
+  background-color: rgba(200, 169, 126, 0.1);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 14 14' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.5 7l3.5 3.5 5.5-6' stroke='%23C8A97E' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* FEATURES SECTION */
+.feat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--border-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  margin-top: 3rem;
+  overflow: hidden;
+}
+
+.feat {
+  background: var(--bg-secondary);
+  padding: 2rem;
+  transition: background 0.2s;
+}
+
+.feat:hover {
+  background: var(--bg-tertiary);
+}
+
+.feat-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(200, 169, 126, 0.1);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  margin-bottom: 1.25rem;
+}
+
+.feat-t {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.feat-d {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+/* SOCIAL PROOF SECTION */
+.proof-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-top: 3rem;
+}
+
+.proof-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+}
+
+.proof-stars {
+  color: var(--accent-gold);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  letter-spacing: 0.1em;
+}
+
+.proof-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 1.5rem;
+  font-style: italic;
+}
+
+.proof-author {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.proof-av {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(200, 169, 126, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  flex-shrink: 0;
+  border: 1px solid rgba(200, 169, 126, 0.3);
+}
+
+.proof-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.proof-role {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
 /* ---- Landing V3 Responsive ---- */
 @media (max-width: 768px) {
   .landing-pain-grid {
