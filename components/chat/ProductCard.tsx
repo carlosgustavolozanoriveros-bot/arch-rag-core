@@ -107,58 +107,57 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         return;
       }
 
-      // PRIORITY: Check if there's a pending download intent (after Wompi redirect + page reload)
-      // This fires BEFORE checking DB because the webhook may not have processed yet
-      const downloadIntent = localStorage.getItem('aec_download_after_purchase');
-      if (downloadIntent) {
+      // Check if there's a pending payment reference (after Wompi redirect + page reload)
+      // This polls the DB until the webhook confirms the payment
+      const pendingPayment = localStorage.getItem('aec_pending_payment');
+      if (pendingPayment) {
         try {
-          const intent = JSON.parse(downloadIntent);
-          if (intent.productId === product.id && Date.now() - intent.timestamp < 300000) {
-            localStorage.removeItem('aec_download_after_purchase');
-            // Show downloading state immediately
-            setHasPurchased(true);
-            hasPurchasedRef.current = true;
-            setCardState('downloading');
-            // Wait for webhook to process, then download with retry
-            const attemptDownload = async (retries: number) => {
-              try {
-                const res = await fetch(`/api/download/${product.id}`);
-                const data = await res.json();
-                if (!res.ok) {
-                  if (retries > 0) {
-                    // Webhook might not have processed yet, retry
-                    setTimeout(() => attemptDownload(retries - 1), 3000);
-                    return;
-                  }
-                  setCardState('purchased');
-                  return;
-                }
-                if (data.downloadUrl && data.token) {
-                  const fileRes = await fetch(data.downloadUrl, { headers: { 'Authorization': `Bearer ${data.token}` } });
-                  if (fileRes.ok) {
-                    const blob = await fileRes.blob();
-                    const blobUrl = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = blobUrl;
-                    link.download = data.fileName || 'download';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-                  }
-                }
+          const payment = JSON.parse(pendingPayment);
+          if (payment.productId === product.id && Date.now() - payment.timestamp < 300000) {
+            setCardState('loading'); // Show "Procesando..."
+            
+            // Poll purchase status until webhook confirms it
+            const pollPurchase = async (retries: number) => {
+              const { data: purchase } = await supabase
+                .from('purchases')
+                .select('id, status')
+                .eq('user_id', session.user.id)
+                .eq('resource_id', product.id)
+                .eq('purchase_type', 'single')
+                .eq('status', 'approved')
+                .maybeSingle();
+              
+              if (purchase) {
+                // Payment confirmed by webhook!
+                localStorage.removeItem('aec_pending_payment');
+                setHasPurchased(true);
+                hasPurchasedRef.current = true;
+                setCardState('downloading');
+                // Now download the file
+                triggerDownload(product.id);
+                return;
+              }
+              
+              if (retries > 0) {
+                // Webhook hasn't processed yet, retry in 2s
+                setTimeout(() => pollPurchase(retries - 1), 2000);
+              } else {
+                // Timeout — webhook might be slow, show download button anyway
+                localStorage.removeItem('aec_pending_payment');
+                setHasPurchased(true);
+                hasPurchasedRef.current = true;
                 setCardState('purchased');
-              } catch {
-                if (retries > 0) setTimeout(() => attemptDownload(retries - 1), 3000);
-                else setCardState('purchased');
               }
             };
-            // First attempt after 3s, up to 3 retries (total ~12s for webhook)
-            setTimeout(() => attemptDownload(3), 3000);
+            
+            // Start polling immediately, up to 10 retries (20 seconds total)
+            pollPurchase(10);
             return;
+          } else {
+            localStorage.removeItem('aec_pending_payment');
           }
         } catch (e) {
-          localStorage.removeItem('aec_download_after_purchase');
+          localStorage.removeItem('aec_pending_payment');
         }
       }
 
@@ -353,7 +352,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
       }
       // Clean up download intent after successful download
-      localStorage.removeItem('aec_download_after_purchase');
+      localStorage.removeItem('aec_pending_payment');
       setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     } catch (err) {
       console.error('Failed to trigger download:', err);
@@ -422,8 +421,9 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     setHasPurchased(true);
     hasPurchasedRef.current = true;
     
-    // Save download intent — survives Wompi page redirect
-    localStorage.setItem('aec_download_after_purchase', JSON.stringify({
+    // Save pending payment reference — survives Wompi page redirect
+    // On page reload, checkAccess will poll the DB until webhook confirms
+    localStorage.setItem('aec_pending_payment', JSON.stringify({
       productId: product.id,
       timestamp: Date.now(),
     }));
@@ -441,15 +441,13 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
   const handleCheckoutError = useCallback((error: string) => {
     console.error('Payment error:', error);
-    // Clean up download intent — payment failed
-    localStorage.removeItem('aec_download_after_purchase');
+    localStorage.removeItem('aec_pending_payment');
     setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     setCheckoutData(null);
   }, []);
 
   const handleCheckoutClose = useCallback(() => {
-    // Clean up download intent — user cancelled
-    localStorage.removeItem('aec_download_after_purchase');
+    localStorage.removeItem('aec_pending_payment');
     setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     setCheckoutData(null);
   }, []);
@@ -511,6 +509,11 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
                 <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', marginRight: '6px' }}>⏳</span>
                 Descargando...
               </button>
+            ) : isLoading ? (
+              <button className="product-card-download-btn" disabled style={{ opacity: 0.8, cursor: 'wait' }}>
+                <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', marginRight: '6px' }}>⏳</span>
+                Procesando pago...
+              </button>
             ) : showDownload ? (
               <button className="product-card-download-btn" onClick={handleDownload}>
                 ⬇ Descargar
@@ -524,10 +527,6 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
                   ⬇ Descargar por $8.000
                 </button>
               </>
-            ) : isLoading ? (
-              <button className="product-card-buy-btn" disabled>
-                Procesando...
-              </button>
             ) : showBuyButtons ? (
               <>
                 <button className="product-card-buy-btn" onClick={handleBuy}>
