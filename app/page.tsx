@@ -12,7 +12,7 @@ export default function LandingPage() {
               <rect x="4" y="4" width="10" height="10" stroke="currentColor" strokeWidth="2.5" opacity="0.5" />
               <rect x="10" y="10" width="10" height="10" stroke="var(--accent-gold)" strokeWidth="2.5" />
             </svg>
-            <span>Asistente AEC</span>
+            <span>Asistente de Recursos AEC</span>
           </div>
           <Link href="/chat" className="landing-nav-cta">
             Probar el asistente
@@ -39,16 +39,7 @@ export default function LandingPage() {
             Dile adiós a las búsquedas frustrantes. Pídele al asistente lo que necesitas en lenguaje natural y obtén 
             familias Revit, bloques AutoCAD, modelos 3D y escenas D5 Render exactas para tu proyecto.
           </p>
-          <div className="landing-tags">
-            <span className="landing-tag">Familias Revit</span>
-            <span className="landing-tag">Bloques AutoCAD</span>
-            <span className="landing-tag">Modelos Sketchup</span>
-            <span className="landing-tag">Assets D5 Render</span>
-            <span className="landing-tag">Cursos Arquitectura</span>
-            <span className="landing-tag">Texturas V-Ray</span>
-            <span className="landing-tag">3ds Max</span>
-          </div>
-          <div className="landing-hero-actions">
+          <div className="landing-hero-actions" style={{ marginTop: '36px' }}>
             <Link href="/chat" className="landing-btn-primary">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -74,6 +65,40 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ===== INFINITE MARQUEE (SEO KEYWORDS) ===== */}
+      <div className="landing-marquee-wrapper">
+        <div className="landing-marquee">
+          {/* Group 1 */}
+          <span>Autodesk Revit</span>
+          <span>Bloques AutoCAD DWG</span>
+          <span>Sketchup</span>
+          <span>D5 Render</span>
+          <span>V-Ray</span>
+          <span>Corona Renderer</span>
+          <span>3ds Max</span>
+          <span>Blender</span>
+          <span>Familias Paramétricas</span>
+          <span>Cursos Arquitectura</span>
+          <span>Ingeniería Civil</span>
+          <span>Modelos 3D Premium</span>
+          <span>Texturas PBR</span>
+          {/* Group 2 (Duplicate for infinite loop) */}
+          <span>Autodesk Revit</span>
+          <span>Bloques AutoCAD DWG</span>
+          <span>Sketchup</span>
+          <span>D5 Render</span>
+          <span>V-Ray</span>
+          <span>Corona Renderer</span>
+          <span>3ds Max</span>
+          <span>Blender</span>
+          <span>Familias Paramétricas</span>
+          <span>Cursos Arquitectura</span>
+          <span>Ingeniería Civil</span>
+          <span>Modelos 3D Premium</span>
+          <span>Texturas PBR</span>
+        </div>
+      </div>
 
       {/* ===== 2. DOLOR — ¿Te suena familiar? ===== */}
       <section className="landing-section">
@@ -303,7 +328,7 @@ export default function LandingPage() {
                 <rect x="4" y="4" width="10" height="10" stroke="currentColor" strokeWidth="2.5" opacity="0.5" />
                 <rect x="10" y="10" width="10" height="10" stroke="var(--accent-gold)" strokeWidth="2.5" />
               </svg>
-              <span>Asistente Arquitectura e Ingeniería</span>
+              <span>Asistente de Recursos AEC</span>
             </div>
             <p className="landing-copyright">© {new Date().getFullYear()} Asistente Inteligente. Todos los derechos reservados.</p>
           </div>

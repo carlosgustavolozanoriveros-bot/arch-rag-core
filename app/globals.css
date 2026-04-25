@@ -1344,31 +1344,57 @@ body:has([class*="waybox"]) {
   margin: 0 auto 28px;
 }
 
-.landing-tags {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 36px;
-  max-width: 620px;
-  margin-left: auto;
-  margin-right: auto;
+.landing-marquee-wrapper {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 16px 0;
+  margin-bottom: 60px;
 }
 
-.landing-tag {
-  padding: 5px 14px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-full);
-  font-size: 0.78rem;
+.landing-marquee {
+  display: flex;
+  white-space: nowrap;
+  animation: scroll-left 40s linear infinite;
+}
+
+.landing-marquee span {
+  display: inline-block;
+  font-size: 0.95rem;
   font-weight: 500;
   color: var(--text-secondary);
-  transition: all var(--transition-fast);
+  padding: 0 24px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: relative;
 }
 
-.landing-tag:hover {
-  border-color: var(--accent-gold);
+.landing-marquee span::after {
+  content: '•';
+  position: absolute;
+  right: 0;
   color: var(--accent-gold);
+  opacity: 0.5;
+}
+
+.landing-marquee span:last-child::after {
+  content: '';
+}
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 .landing-hero-actions {
