@@ -434,6 +434,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
   useEffect(() => {
     const handleGlobalSub = () => {
       setIsUserSubscriber(true);
+      isUserSubscriberRef.current = true;
       setCardState('subscriber');
     };
     window.addEventListener('subscription_purchased', handleGlobalSub);
@@ -446,20 +447,28 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     
     setHasPurchased(true);
     hasPurchasedRef.current = true;
-    // Remove pending payment so polling stops (we handle download here)
     localStorage.removeItem('aec_pending_payment');
     
     if (isSub) {
-      window.dispatchEvent(new Event('subscription_purchased'));
+      setIsUserSubscriber(true);
+      isUserSubscriberRef.current = true;
     }
     
     setCheckoutData(null);
-    // Auto-start download only if not already in progress
+    // Auto-start download of the card that was purchased
     if (!localStorage.getItem(`aec_downloading_${product.id}`)) {
       setCardState('downloading');
       setTimeout(() => {
         triggerDownload(product.id);
       }, 500);
+    }
+    
+    // Dispatch subscription event AFTER setting download state on this card
+    // so other cards show 'Descargar' while this one shows 'Descargando...'
+    if (isSub) {
+      setTimeout(() => {
+        window.dispatchEvent(new Event('subscription_purchased'));
+      }, 100);
     }
   }, [product.id, triggerDownload, checkoutData]);
 
