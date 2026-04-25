@@ -107,7 +107,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         return;
       }
 
-      // PRIORITY: Check if there's a pending download intent (after Wompi redirect)
+      // PRIORITY: Check if there's a pending download intent (after Wompi redirect + page reload)
       // This fires BEFORE checking DB because the webhook may not have processed yet
       const downloadIntent = localStorage.getItem('aec_download_after_purchase');
       if (downloadIntent) {
@@ -115,15 +115,47 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
           const intent = JSON.parse(downloadIntent);
           if (intent.productId === product.id && Date.now() - intent.timestamp < 300000) {
             localStorage.removeItem('aec_download_after_purchase');
-            // Trust the intent — show downloading state immediately
+            // Show downloading state immediately
             setHasPurchased(true);
             hasPurchasedRef.current = true;
             setCardState('downloading');
-            // Give the webhook a moment to process, then download
-            setTimeout(() => {
-              triggerDownload(product.id);
-            }, 2000);
-            return; // Skip other checks for this card
+            // Wait for webhook to process, then download with retry
+            const attemptDownload = async (retries: number) => {
+              try {
+                const res = await fetch(`/api/download/${product.id}`);
+                const data = await res.json();
+                if (!res.ok) {
+                  if (retries > 0) {
+                    // Webhook might not have processed yet, retry
+                    setTimeout(() => attemptDownload(retries - 1), 3000);
+                    return;
+                  }
+                  setCardState('purchased');
+                  return;
+                }
+                if (data.downloadUrl && data.token) {
+                  const fileRes = await fetch(data.downloadUrl, { headers: { 'Authorization': `Bearer ${data.token}` } });
+                  if (fileRes.ok) {
+                    const blob = await fileRes.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = data.fileName || 'download';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+                  }
+                }
+                setCardState('purchased');
+              } catch {
+                if (retries > 0) setTimeout(() => attemptDownload(retries - 1), 3000);
+                else setCardState('purchased');
+              }
+            };
+            // First attempt after 3s, up to 3 retries (total ~12s for webhook)
+            setTimeout(() => attemptDownload(3), 3000);
+            return;
           }
         } catch (e) {
           localStorage.removeItem('aec_download_after_purchase');
@@ -168,11 +200,6 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
                 if (res.ok) {
                   setCheckoutData(data);
                   setCardState('checkout');
-                  // Save download intent NOW — before Wompi can redirect
-                  localStorage.setItem('aec_download_after_purchase', JSON.stringify({
-                    productId: product.id,
-                    timestamp: Date.now(),
-                  }));
                 }
               } catch (e) {
                 console.error('Auto-checkout error:', e);
@@ -230,11 +257,6 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
       setCheckoutData(data);
       setCardState('checkout');
-      // Save download intent NOW — before Wompi can redirect the page
-      localStorage.setItem('aec_download_after_purchase', JSON.stringify({
-        productId: product.id,
-        timestamp: Date.now(),
-      }));
     } catch (error) {
       console.error('Buy error:', error);
       setCardState('idle');
@@ -396,10 +418,15 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
   const handleCheckoutSuccess = useCallback(() => {
     const isSub = checkoutData?.purchaseType === 'subscription';
     
-    setCardState('purchased');
+    setCardState('downloading');
     setHasPurchased(true);
     hasPurchasedRef.current = true;
-    // Download intent was already saved before Wompi opened (survives redirect)
+    
+    // Save download intent — survives Wompi page redirect
+    localStorage.setItem('aec_download_after_purchase', JSON.stringify({
+      productId: product.id,
+      timestamp: Date.now(),
+    }));
     
     if (isSub) {
       window.dispatchEvent(new Event('subscription_purchased'));
