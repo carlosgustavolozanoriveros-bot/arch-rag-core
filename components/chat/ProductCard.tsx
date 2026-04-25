@@ -71,7 +71,6 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
   const [userId, setUserId] = useState<string | null>(null);
   const isUserSubscriberRef = useRef(false);
   const hasPurchasedRef = useRef(purchased);
-  const downloadTriggeredRef = useRef(false);
 
   const thumbnailUrl = product.url_thumbnail ? toEmbeddableUrl(product.url_thumbnail) : null;
 
@@ -327,9 +326,10 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
   // Trigger download via direct URL
   const triggerDownload = useCallback(async (resourceId: string) => {
-    // Prevent duplicate downloads
-    if (downloadTriggeredRef.current) return;
-    downloadTriggeredRef.current = true;
+    // Prevent duplicate downloads (survives component remount)
+    const guardKey = `aec_downloading_${resourceId}`;
+    if (localStorage.getItem(guardKey)) return;
+    localStorage.setItem(guardKey, '1');
     try {
       setCardState('downloading');
       const res = await fetch(`/api/download/${resourceId}`);
@@ -378,11 +378,11 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       }
       // Clean up download intent after successful download
       localStorage.removeItem('aec_pending_payment');
-      downloadTriggeredRef.current = false;
+      localStorage.removeItem(`aec_downloading_${resourceId}`);
       setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     } catch (err) {
       console.error('Failed to trigger download:', err);
-      downloadTriggeredRef.current = false;
+      localStorage.removeItem(`aec_downloading_${resourceId}`);
       setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     }
   }, [product.id]);
@@ -454,8 +454,8 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     }
     
     setCheckoutData(null);
-    // Auto-start download only if polling hasn't already started one
-    if (!downloadTriggeredRef.current) {
+    // Auto-start download only if not already in progress
+    if (!localStorage.getItem(`aec_downloading_${product.id}`)) {
       setCardState('downloading');
       setTimeout(() => {
         triggerDownload(product.id);
