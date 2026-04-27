@@ -148,7 +148,6 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
               
               if (confirmed) {
                 localStorage.removeItem('aec_pending_payment');
-                setCardState('downloading');
                 triggerDownload(product.id);
                 return;
               }
@@ -353,8 +352,8 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     const guardKey = `aec_downloading_${resourceId}`;
     if (localStorage.getItem(guardKey)) return;
     localStorage.setItem(guardKey, '1');
+    setCardState('downloading');
     try {
-      setCardState('downloading');
       const res = await fetch(`/api/download/${resourceId}`);
       const data = await res.json();
       
@@ -447,6 +446,12 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
       setCheckoutData(data);
       setCardState('checkout');
+      // Save BEFORE Wompi opens — survives page redirect
+      localStorage.setItem('aec_pending_payment', JSON.stringify({
+        productId: product.id,
+        purchaseType: 'single_discounted',
+        timestamp: Date.now(),
+      }));
     } catch (error) {
       console.error('Discounted buy error:', error);
       setCardState('daily_limit');
