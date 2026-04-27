@@ -482,7 +482,17 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     
     setHasPurchased(true);
     hasPurchasedRef.current = true;
-    localStorage.removeItem('aec_pending_payment');
+    // DON'T remove aec_pending_payment here — Wompi will redirect the page
+    // and the polling system needs it on reload to detect the purchase.
+    // Refresh timestamp so it doesn't expire during the redirect.
+    const pendingPayment = localStorage.getItem('aec_pending_payment');
+    if (pendingPayment) {
+      try {
+        const parsed = JSON.parse(pendingPayment);
+        parsed.timestamp = Date.now();
+        localStorage.setItem('aec_pending_payment', JSON.stringify(parsed));
+      } catch (e) { /* ignore */ }
+    }
     
     if (isSub) {
       setIsUserSubscriber(true);
@@ -515,7 +525,8 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
   }, []);
 
   const handleCheckoutClose = useCallback(() => {
-    localStorage.removeItem('aec_pending_payment');
+    // DON'T remove aec_pending_payment — user might have paid but Wompi
+    // returned PENDING status. The polling system will handle it on reload.
     setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     setCheckoutData(null);
   }, []);
