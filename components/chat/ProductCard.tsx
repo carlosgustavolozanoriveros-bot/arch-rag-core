@@ -519,23 +519,27 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     }
 
     setCheckoutData(null);
-    // Clear guard key and start download (only if not already downloaded)
-    const doneKey = `aec_download_done_${product.id}`;
-    if (localStorage.getItem(doneKey)) {
-      // Already downloaded — just show the button
-      setCardState('purchased');
-    } else {
-      localStorage.removeItem(`aec_downloading_${product.id}`);
-      setCardState('downloading');
-      setTimeout(() => {
-        triggerDownload(product.id);
-      }, 500);
-    }
 
     if (isSub) {
+      // For subscriptions: DON'T download here. Wompi always redirects,
+      // and the polling system will handle the download on reload.
+      // Just show loading state until the redirect happens.
+      setCardState('loading');
       setTimeout(() => {
         window.dispatchEvent(new Event('subscription_purchased'));
       }, 100);
+    } else {
+      // For single purchases: try to download immediately
+      const doneKey = `aec_download_done_${product.id}`;
+      if (localStorage.getItem(doneKey)) {
+        setCardState('purchased');
+      } else {
+        localStorage.removeItem(`aec_downloading_${product.id}`);
+        setCardState('downloading');
+        setTimeout(() => {
+          triggerDownload(product.id);
+        }, 500);
+      }
     }
   }, [product.id, triggerDownload, checkoutData]);
 
