@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     description: 'Consultor IA especializado en recursos BIM para Revit. +23 packs profesionales de familias paramátricas.',
     type: 'website',
   },
+  metadataBase: new URL('https://asistenteaec.com'),
 };
 
 export default function RootLayout({
