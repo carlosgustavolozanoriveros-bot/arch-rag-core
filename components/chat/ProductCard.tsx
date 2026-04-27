@@ -477,10 +477,18 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
   }, []);
 
   // Checkout callbacks
-  // Wompi ALWAYS redirects the page after payment, so we don't try to download here.
-  // The polling system in checkAccess will handle it on page reload.
+  // Strategy: Start download immediately AND keep aec_pending_payment as fallback.
+  // - If download completes before Wompi redirects → triggerDownload removes
+  //   aec_pending_payment → no double download on reload.
+  // - If Wompi redirects before download completes → aec_pending_payment survives
+  //   → polling system handles it on reload.
   const handleCheckoutSuccess = useCallback(() => {
-    // Refresh the pending payment timestamp so it survives the redirect
+    const isSub = checkoutData?.purchaseType === 'subscription';
+
+    setHasPurchased(true);
+    hasPurchasedRef.current = true;
+
+    // Refresh timestamp so pending payment survives redirect if download doesn't finish
     const pendingPayment = localStorage.getItem('aec_pending_payment');
     if (pendingPayment) {
       try {
@@ -489,10 +497,26 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         localStorage.setItem('aec_pending_payment', JSON.stringify(parsed));
       } catch (e) { /* ignore */ }
     }
+
+    if (isSub) {
+      setIsUserSubscriber(true);
+      isUserSubscriberRef.current = true;
+    }
+
     setCheckoutData(null);
-    // Show loading state briefly before Wompi redirects
-    setCardState('loading');
-  }, []);
+    // Clear guard key and start download
+    localStorage.removeItem(`aec_downloading_${product.id}`);
+    setCardState('downloading');
+    setTimeout(() => {
+      triggerDownload(product.id);
+    }, 500);
+
+    if (isSub) {
+      setTimeout(() => {
+        window.dispatchEvent(new Event('subscription_purchased'));
+      }, 100);
+    }
+  }, [product.id, triggerDownload, checkoutData]);
 
   const handleCheckoutError = useCallback((error: string) => {
     console.error('Payment error:', error);
