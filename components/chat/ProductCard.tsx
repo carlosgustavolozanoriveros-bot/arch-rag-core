@@ -148,6 +148,14 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
               
               if (confirmed) {
                 localStorage.removeItem('aec_pending_payment');
+                // Skip download if already downloaded (prevents double download)
+                const doneKey = `aec_download_done_${product.id}`;
+                if (localStorage.getItem(doneKey)) {
+                  setHasPurchased(true);
+                  hasPurchasedRef.current = true;
+                  setCardState('purchased');
+                  return;
+                }
                 // Clear guard key so triggerDownload is not blocked
                 localStorage.removeItem(`aec_downloading_${product.id}`);
                 triggerDownload(product.id);
@@ -407,6 +415,8 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       }
       // Clean up and show "Descargar" button so user can re-download
       localStorage.removeItem(guardKey);
+      // Mark download as completed (prevents double download on redirect)
+      localStorage.setItem(`aec_download_done_${resourceId}`, Date.now().toString());
       // Mark as purchased so button stays as "Descargar"
       setHasPurchased(true);
       hasPurchasedRef.current = true;
@@ -418,8 +428,11 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     }
   }, [product.id]);
 
-  // Handle download
+  // Handle download (manual click — always allow)
   const handleDownload = useCallback(() => {
+    // Clear the 'download done' flag so manual re-downloads work
+    localStorage.removeItem(`aec_download_done_${product.id}`);
+    localStorage.removeItem(`aec_downloading_${product.id}`);
     triggerDownload(product.id);
   }, [product.id, triggerDownload]);
 
@@ -506,12 +519,18 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     }
 
     setCheckoutData(null);
-    // Clear guard key and start download
-    localStorage.removeItem(`aec_downloading_${product.id}`);
-    setCardState('downloading');
-    setTimeout(() => {
-      triggerDownload(product.id);
-    }, 500);
+    // Clear guard key and start download (only if not already downloaded)
+    const doneKey = `aec_download_done_${product.id}`;
+    if (localStorage.getItem(doneKey)) {
+      // Already downloaded — just show the button
+      setCardState('purchased');
+    } else {
+      localStorage.removeItem(`aec_downloading_${product.id}`);
+      setCardState('downloading');
+      setTimeout(() => {
+        triggerDownload(product.id);
+      }, 500);
+    }
 
     if (isSub) {
       setTimeout(() => {
