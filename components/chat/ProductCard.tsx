@@ -148,6 +148,8 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
               
               if (confirmed) {
                 localStorage.removeItem('aec_pending_payment');
+                // Clear guard key so triggerDownload is not blocked
+                localStorage.removeItem(`aec_downloading_${product.id}`);
                 triggerDownload(product.id);
                 return;
               }
@@ -362,11 +364,13 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         
         // Handle daily limit reached
         if (res.status === 429 && data.dailyLimitReached) {
+          localStorage.removeItem(guardKey);
           setCardState('daily_limit');
           return;
         }
         
         alert(data.error || 'Error al descargar el archivo');
+        localStorage.removeItem(guardKey);
         setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
         return;
       }
@@ -398,13 +402,16 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         // Clean up memory
         setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
       }
-      // Clean up download intent after successful download
+      // Clean up and show "Descargar" button so user can re-download
       localStorage.removeItem('aec_pending_payment');
-      localStorage.removeItem(`aec_downloading_${resourceId}`);
-      setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
+      localStorage.removeItem(guardKey);
+      // Mark as purchased so button stays as "Descargar"
+      setHasPurchased(true);
+      hasPurchasedRef.current = true;
+      setCardState('purchased');
     } catch (err) {
       console.error('Failed to trigger download:', err);
-      localStorage.removeItem(`aec_downloading_${resourceId}`);
+      localStorage.removeItem(guardKey);
       setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     }
   }, [product.id]);
@@ -483,13 +490,13 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     }
     
     setCheckoutData(null);
+    // Clear guard key so triggerDownload is not blocked
+    localStorage.removeItem(`aec_downloading_${product.id}`);
     // Auto-start download of the card that was purchased
-    if (!localStorage.getItem(`aec_downloading_${product.id}`)) {
-      setCardState('downloading');
-      setTimeout(() => {
-        triggerDownload(product.id);
-      }, 500);
-    }
+    setCardState('downloading');
+    setTimeout(() => {
+      triggerDownload(product.id);
+    }, 500);
     
     // Dispatch subscription event AFTER setting download state on this card
     // so other cards show 'Descargar' while this one shows 'Descargando...'
