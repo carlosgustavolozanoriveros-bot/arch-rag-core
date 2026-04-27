@@ -374,10 +374,13 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
         return;
       }
+
+      // Access confirmed — remove pending payment NOW (before file download)
+      // so if Wompi redirects mid-download, polling won't trigger a second download.
+      localStorage.removeItem('aec_pending_payment');
       
       if (data.downloadUrl && data.token) {
         // Fetch file directly from Google API into a browser Blob
-        // This avoids Vercel proxy AND Google's "automated queries" direct-link block
         const fileRes = await fetch(data.downloadUrl, {
           headers: {
             'Authorization': `Bearer ${data.token}`
@@ -403,7 +406,6 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
       }
       // Clean up and show "Descargar" button so user can re-download
-      localStorage.removeItem('aec_pending_payment');
       localStorage.removeItem(guardKey);
       // Mark as purchased so button stays as "Descargar"
       setHasPurchased(true);
