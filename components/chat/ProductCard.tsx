@@ -593,6 +593,10 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
           {cardState === 'subscriber' && (
             <div className="product-card-badge-pro">PRO ✓</div>
           )}
+          {/* Size badge */}
+          {product.tamano && (
+            <div className="product-card-badge-size">{product.tamano}</div>
+          )}
         </div>
 
         <div className="product-card-body">
@@ -606,6 +610,12 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
           {description && (
             <p className="product-card-desc">{description}</p>
+          )}
+
+          {product.contenido_incluido && (
+            <div className="product-card-contents">
+              📦 {product.contenido_incluido}
+            </div>
           )}
 
           <div className="product-card-footer">

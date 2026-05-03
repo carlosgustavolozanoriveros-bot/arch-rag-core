@@ -940,6 +940,31 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+.product-card-badge-size {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  color: #e0e0e0;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.3px;
+}
+
+.product-card-contents {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 5px 0;
+  margin-bottom: 4px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .product-card-thumb {
   position: relative;
 }
