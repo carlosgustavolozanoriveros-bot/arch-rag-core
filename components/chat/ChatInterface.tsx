@@ -350,8 +350,8 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
               </h1>
               <p className="welcome-subtitle">
                 Tu aliado para encontrar el recurso exacto que necesitas en tus proyectos 
-                de arquitectura, ingeniería y construcción. Familias, bloques, texturas, 
-                cursos y más — solo cuéntame qué necesitas.
+                de arquitectura, ingeniería y construcción. Familias Revit, proyectos, bloques AutoCAD, 
+                modelos D5 y más — solo cuéntame qué necesitas.
               </p>
               <div className="welcome-suggestions">
                 <button
@@ -364,31 +364,31 @@ export function ChatInterface({ currentChatId, onChatCreated }: ChatInterfacePro
                   className="suggestion-chip"
                   onClick={() => handleSuggestion('Necesito bloques para AutoCAD')}
                 >
-                  📐 Bloques CAD
+                  ✏️ Bloques AutoCAD
                 </button>
                 <button
                   className="suggestion-chip"
-                  onClick={() => handleSuggestion('Busco texturas y materiales para renders')}
+                  onClick={() => handleSuggestion('Busco mobiliario y decoración de interiores')}
                 >
-                  🎨 Texturas y Materiales
+                  🛋️ Mobiliario e Interior
                 </button>
                 <button
                   className="suggestion-chip"
-                  onClick={() => handleSuggestion('Necesito assets 3D para mis proyectos')}
+                  onClick={() => handleSuggestion('Necesito elementos de paisajismo y exterior')}
                 >
-                  🌳 Assets 3D
+                  🌿 Paisajismo y Exterior
                 </button>
                 <button
                   className="suggestion-chip"
-                  onClick={() => handleSuggestion('Quiero aprender con cursos de BIM y renders')}
+                  onClick={() => handleSuggestion('Busco modelos 3D para D5 Render')}
                 >
-                  📚 Cursos y Tutoriales
+                  🎬 Modelos D5 Render
                 </button>
                 <button
                   className="suggestion-chip"
-                  onClick={() => handleSuggestion('Busco escenas o plantillas para D5 Render o SketchUp')}
+                  onClick={() => handleSuggestion('Quiero aprender con cursos de BIM y construcción')}
                 >
-                  🖼️ Escenas y Templates
+                  📚 Cursos AEC
                 </button>
               </div>
             </div>
