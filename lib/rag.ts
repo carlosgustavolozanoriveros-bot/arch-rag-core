@@ -57,7 +57,7 @@ export async function getResourcesByIds(ids: string[]): Promise<MatchedResource[
 
   const { data, error } = await supabase
     .from('aec_resources')
-    .select('id, nombre_ui, chunk_semantico, tipo_recurso, categoria, subcategoria, version_revit, es_parametrico, url_thumbnail, precio_usd, etiquetas_duras')
+    .select('id, nombre_ui, chunk_semantico, tipo_recurso, categoria, subcategoria, version, url_thumbnail, etiquetas_duras, descripcion_card, drive_file_id, tamano, contenido_incluido')
     .in('id', ids);
 
   if (error) {

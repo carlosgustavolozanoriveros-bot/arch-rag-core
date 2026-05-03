@@ -13,11 +13,11 @@ interface ProductData {
   tipo_recurso?: string;
   categoria?: string;
   subcategoria?: string;
-  version_revit?: string;
-  es_parametrico?: boolean;
+  version?: string | null;
   url_thumbnail?: string | null;
-  precio_usd?: number | string;
   etiquetas_duras?: string[];
+  tamano?: string | null;
+  contenido_incluido?: string | null;
   similarity?: number;
 }
 

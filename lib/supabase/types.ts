@@ -6,12 +6,14 @@ export interface AecResource {
   tipo_recurso: string;
   categoria: string;
   subcategoria: string;
-  version_revit: string;
-  es_parametrico: boolean;
+  version: string | null;
   url_thumbnail: string | null;
   url_accion: string | null;
   etiquetas_duras: string[];
-  precio_usd: number;
+  descripcion_card: string | null;
+  drive_file_id: string | null;
+  tamano: string | null;
+  contenido_incluido: string | null;
   embedding?: number[];
   created_at: string;
 }
@@ -67,10 +69,12 @@ export interface MatchedResource {
   tipo_recurso: string;
   categoria: string;
   subcategoria: string;
-  version_revit: string;
-  es_parametrico: boolean;
+  version: string | null;
   url_thumbnail: string | null;
-  precio_usd: number;
   etiquetas_duras: string[];
+  descripcion_card: string | null;
+  drive_file_id: string | null;
+  tamano: string | null;
+  contenido_incluido: string | null;
   similarity: number;
 }
