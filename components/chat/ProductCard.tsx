@@ -534,6 +534,9 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       if (localStorage.getItem(doneKey)) {
         setCardState('purchased');
       } else {
+        // Set done flag BEFORE download — if Wompi redirects mid-download,
+        // the polling system will see this flag and skip the duplicate download.
+        localStorage.setItem(doneKey, Date.now().toString());
         localStorage.removeItem(`aec_downloading_${product.id}`);
         setCardState('downloading');
         setTimeout(() => {
