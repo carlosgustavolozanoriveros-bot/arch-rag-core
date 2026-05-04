@@ -356,7 +356,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     }
   }, [userId, onRequireLogin]);
 
-  // Trigger download via direct URL
+  // Trigger download via streaming API
   const triggerDownload = useCallback(async (resourceId: string) => {
     // Prevent duplicate downloads (survives component remount)
     const guardKey = `aec_downloading_${resourceId}`;
@@ -364,7 +364,8 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     localStorage.setItem(guardKey, '1');
     setCardState('downloading');
     try {
-      const res = await fetch(`/api/download/${resourceId}`);
+      // Step 1: Pre-flight check (access, limits, errors)
+      const res = await fetch(`/api/download/${resourceId}?check=true`);
       const data = await res.json();
       
       if (!res.ok) {
@@ -383,44 +384,27 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
         return;
       }
 
-      // Access confirmed — remove pending payment NOW (before file download)
-      // so if Wompi redirects mid-download, polling won't trigger a second download.
+      // Access confirmed — remove pending payment
       localStorage.removeItem('aec_pending_payment');
       
-      if (data.downloadUrl && data.token) {
-        // Fetch file directly from Google API into a browser Blob
-        const fileRes = await fetch(data.downloadUrl, {
-          headers: {
-            'Authorization': `Bearer ${data.token}`
-          }
-        });
+      // Step 2: Trigger native browser download via streaming API
+      // The API streams the file from Google Drive → browser downloads natively
+      // with progress bar, no blob in memory, works for any file size.
+      const link = document.createElement('a');
+      link.href = `/api/download/${resourceId}`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-        if (!fileRes.ok) {
-          throw new Error('Error downloading from Google Drive');
-        }
-
-        // Convert to blob and trigger local download
-        const blob = await fileRes.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = data.fileName || 'download';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // Clean up memory
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-      }
-      // Clean up and show "Descargar" button so user can re-download
-      localStorage.removeItem(guardKey);
-      // Mark download as completed (prevents double download on redirect)
-      localStorage.setItem(`aec_download_done_${resourceId}`, Date.now().toString());
-      // Mark as purchased so button stays as "Descargar"
-      setHasPurchased(true);
-      hasPurchasedRef.current = true;
-      setCardState('purchased');
+      // Clean up after a brief delay (download starts immediately)
+      setTimeout(() => {
+        localStorage.removeItem(guardKey);
+        localStorage.setItem(`aec_download_done_${resourceId}`, Date.now().toString());
+        setHasPurchased(true);
+        hasPurchasedRef.current = true;
+        setCardState('purchased');
+      }, 2000);
     } catch (err) {
       console.error('Failed to trigger download:', err);
       localStorage.removeItem(guardKey);
