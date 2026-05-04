@@ -503,7 +503,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     setHasPurchased(true);
     hasPurchasedRef.current = true;
 
-    // Refresh timestamp so pending payment survives redirect if download doesn't finish
+    // Refresh timestamp so pending payment survives redirect
     const pendingPayment = localStorage.getItem('aec_pending_payment');
     if (pendingPayment) {
       try {
@@ -520,31 +520,18 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
     setCheckoutData(null);
 
+    // For BOTH single and subscription: DON'T download here.
+    // Wompi always redirects the page when clicking "Volver al comercio",
+    // so the polling system will handle the download on reload with proper
+    // "Descargando..." UI feedback.
+    setCardState('loading');
+
     if (isSub) {
-      // For subscriptions: DON'T download here. Wompi always redirects,
-      // and the polling system will handle the download on reload.
-      // Just show loading state until the redirect happens.
-      setCardState('loading');
       setTimeout(() => {
         window.dispatchEvent(new Event('subscription_purchased'));
       }, 100);
-    } else {
-      // For single purchases: try to download immediately
-      const doneKey = `aec_download_done_${product.id}`;
-      if (localStorage.getItem(doneKey)) {
-        setCardState('purchased');
-      } else {
-        // Set done flag BEFORE download — if Wompi redirects mid-download,
-        // the polling system will see this flag and skip the duplicate download.
-        localStorage.setItem(doneKey, Date.now().toString());
-        localStorage.removeItem(`aec_downloading_${product.id}`);
-        setCardState('downloading');
-        setTimeout(() => {
-          triggerDownload(product.id);
-        }, 500);
-      }
     }
-  }, [product.id, triggerDownload, checkoutData]);
+  }, [product.id, checkoutData]);
 
   const handleCheckoutError = useCallback((error: string) => {
     console.error('Payment error:', error);
