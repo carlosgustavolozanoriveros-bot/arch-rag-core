@@ -390,10 +390,17 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       // Access confirmed — remove pending payment
       localStorage.removeItem('aec_pending_payment');
       
-      // Open Google Drive download URL — Google handles the file transfer
-      // No Vercel limits, supports resume, works for any file size
+      // Trigger Google Drive download in background (no new tab)
+      // Use a hidden iframe so the download starts silently
       if (data.downloadUrl) {
-        window.open(data.downloadUrl, '_blank');
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = data.downloadUrl;
+        document.body.appendChild(iframe);
+        // Remove iframe after download starts
+        setTimeout(() => {
+          try { document.body.removeChild(iframe); } catch (e) { /* ignore */ }
+        }, 5000);
       }
 
       // Clean up after a brief delay
