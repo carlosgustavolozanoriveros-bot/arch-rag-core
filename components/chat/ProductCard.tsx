@@ -499,23 +499,47 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     }
 
     setCheckoutData(null);
+    setCardState('loading'); // Show "Procesando pago..."
 
     if (isSub) {
-      // For subscriptions: Wompi always redirects, polling handles it
-      setCardState('loading');
       setTimeout(() => {
         window.dispatchEvent(new Event('subscription_purchased'));
       }, 100);
     } else {
-      // For single purchases: trigger download immediately via streaming API
-      // The polling is just a fallback if Wompi redirects before this completes
-      localStorage.removeItem(`aec_downloading_${product.id}`);
-      setCardState('downloading');
-      setTimeout(() => {
-        triggerDownload(product.id);
-      }, 500);
+      // For single purchases: poll until webhook confirms, then download
+      const supabase = createClient();
+      const pollAndDownload = async (retries: number) => {
+        const { data: purchase } = await supabase
+          .from('purchases')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('resource_id', product.id)
+          .eq('status', 'approved')
+          .maybeSingle();
+
+        if (purchase) {
+          // Webhook confirmed — trigger download
+          localStorage.removeItem('aec_pending_payment');
+          localStorage.removeItem(`aec_downloading_${product.id}`);
+          setHasPurchased(true);
+          hasPurchasedRef.current = true;
+          triggerDownload(product.id);
+          return;
+        }
+
+        if (retries > 0) {
+          setTimeout(() => pollAndDownload(retries - 1), 2000);
+        } else {
+          // Timeout — let user retry manually
+          setCardState('purchased');
+          setHasPurchased(true);
+          hasPurchasedRef.current = true;
+        }
+      };
+      // Start polling after 2 seconds (give webhook time)
+      setTimeout(() => pollAndDownload(25), 2000);
     }
-  }, [product.id, triggerDownload, checkoutData]);
+  }, [product.id, userId, triggerDownload, checkoutData]);
 
   const handleCheckoutError = useCallback((error: string) => {
     console.error('Payment error:', error);
