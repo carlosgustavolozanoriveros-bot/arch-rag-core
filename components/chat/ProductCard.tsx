@@ -131,12 +131,12 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
                 }
               } else {
                 // For single purchases, check purchases table
+                // Don't filter by purchase_type — find ANY approved purchase
                 const { data: purchase } = await supabase
                   .from('purchases')
                   .select('id, status')
                   .eq('user_id', session.user.id)
                   .eq('resource_id', product.id)
-                  .eq('purchase_type', 'single')
                   .eq('status', 'approved')
                   .maybeSingle();
                 confirmed = !!purchase;
@@ -165,7 +165,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
               if (retries > 0) {
                 setTimeout(() => pollPurchase(retries - 1), 2000);
               } else {
-                // Timeout
+                // Timeout — clear pending and reset
                 localStorage.removeItem('aec_pending_payment');
                 if (isSubscriber) {
                   setIsUserSubscriber(true);
@@ -177,8 +177,8 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
               }
             };
             
-            // Start polling, up to 15 retries (30 seconds total)
-            pollPurchase(15);
+            // Start polling, up to 25 retries (50 seconds total)
+            pollPurchase(25);
             return;
           } else if (Date.now() - payment.timestamp >= 300000) {
             // Only remove if expired (>5 min) — DON'T remove just because
