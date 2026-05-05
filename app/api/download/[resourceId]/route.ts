@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
-import { google } from 'googleapis';
 import { DAILY_DOWNLOAD_LIMIT } from '@/lib/wompi';
 
-// Allow up to 5 minutes for large file streaming
-export const maxDuration = 300;
+export const maxDuration = 15;
 
 /**
  * GET /api/download/[resourceId]
  * 
  * Protected download endpoint with Fair Use Policy.
- * - ?check=true → Pre-flight: returns JSON { ok, fileName } or error
- * - Without check → Streams the file directly from Google Drive
+ * Verifies auth + purchase → returns Google Drive download URL.
+ * Google Drive handles the actual file transfer (no Vercel limits).
  */
 export async function GET(
   req: NextRequest,
@@ -19,7 +17,6 @@ export async function GET(
 ) {
   try {
     const { resourceId } = await params;
-    const isCheck = req.nextUrl.searchParams.get('check') === 'true';
 
     if (!resourceId) {
       return NextResponse.json({ error: 'Resource ID required' }, { status: 400 });
@@ -116,38 +113,6 @@ export async function GET(
       return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
     }
 
-    const fileId = resource.drive_file_id || extractFileId(resource.url_accion);
-
-    if (!fileId) {
-      return NextResponse.redirect(resource.url_accion, 302);
-    }
-
-    // Authenticate with Google Drive API
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        private_key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      },
-      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
-    });
-
-    const accessToken = await auth.getAccessToken();
-    if (!accessToken) {
-      return NextResponse.json({ error: 'Failed to get download token' }, { status: 500 });
-    }
-
-    // Get file metadata
-    const drive = google.drive({ version: 'v3', auth });
-    const fileMeta = await drive.files.get({ fileId, fields: 'name, size' });
-    const fileName = fileMeta.data.name || `${resource.nombre_ui || 'download'}`;
-    const fileSize = fileMeta.data.size ? parseInt(fileMeta.data.size) : 0;
-
-    // ── Pre-flight check mode ──
-    if (isCheck) {
-      return NextResponse.json({ ok: true, fileName, fileSize });
-    }
-
-    // ── Stream mode: pipe file from Google Drive → browser ──
     // Log the download (fire-and-forget)
     serviceClient
       .from('downloads')
@@ -156,30 +121,23 @@ export async function GET(
         if (error) console.error('Download log error:', error);
       });
 
-    // Fetch file from Google Drive as a stream
-    const driveUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
-    const driveRes = await fetch(driveUrl, {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
-    });
-
-    if (!driveRes.ok || !driveRes.body) {
-      console.error('Google Drive fetch error:', driveRes.status, driveRes.statusText);
-      return NextResponse.json({ error: 'Error downloading from Google Drive' }, { status: 502 });
+    // Build Google Drive direct download URL
+    const fileId = resource.drive_file_id || extractFileId(resource.url_accion);
+    
+    let downloadUrl: string;
+    if (fileId) {
+      // Direct download URL with confirm=t to bypass virus scan warning
+      downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`;
+    } else {
+      // Fallback to the raw url_accion
+      downloadUrl = resource.url_accion;
     }
 
-    // Sanitize filename for Content-Disposition header
-    const safeName = fileName.replace(/[^\w\s.\-()]/g, '_');
-    const encodedName = encodeURIComponent(fileName);
-
-    // Stream the response directly to the browser
-    return new Response(driveRes.body as ReadableStream, {
-      status: 200,
-      headers: {
-        'Content-Type': driveRes.headers.get('content-type') || 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${safeName}"; filename*=UTF-8''${encodedName}`,
-        ...(fileSize > 0 ? { 'Content-Length': fileSize.toString() } : {}),
-        'Cache-Control': 'no-store',
-      },
+    // Return the download URL for the frontend to open
+    return NextResponse.json({
+      ok: true,
+      downloadUrl,
+      fileName: resource.nombre_ui || 'download',
     });
 
   } catch (error) {

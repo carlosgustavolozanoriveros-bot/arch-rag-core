@@ -359,7 +359,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     }
   }, [userId, onRequireLogin]);
 
-  // Trigger download via streaming API
+  // Trigger download via Google Drive redirect
   const triggerDownload = useCallback(async (resourceId: string) => {
     // Prevent duplicate downloads (survives component remount)
     const guardKey = `aec_downloading_${resourceId}`;
@@ -367,8 +367,8 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     localStorage.setItem(guardKey, '1');
     setCardState('downloading');
     try {
-      // Step 1: Pre-flight check (access, limits, errors)
-      const res = await fetch(`/api/download/${resourceId}?check=true`);
+      // Call API to verify access and get Google Drive download URL
+      const res = await fetch(`/api/download/${resourceId}`);
       const data = await res.json();
       
       if (!res.ok) {
@@ -390,17 +390,13 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       // Access confirmed — remove pending payment
       localStorage.removeItem('aec_pending_payment');
       
-      // Step 2: Trigger native browser download via streaming API
-      // The API streams the file from Google Drive → browser downloads natively
-      // with progress bar, no blob in memory, works for any file size.
-      const link = document.createElement('a');
-      link.href = `/api/download/${resourceId}`;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Open Google Drive download URL — Google handles the file transfer
+      // No Vercel limits, supports resume, works for any file size
+      if (data.downloadUrl) {
+        window.open(data.downloadUrl, '_blank');
+      }
 
-      // Clean up after a brief delay (download starts immediately)
+      // Clean up after a brief delay
       setTimeout(() => {
         localStorage.removeItem(guardKey);
         localStorage.setItem(`aec_download_done_${resourceId}`, Date.now().toString());
