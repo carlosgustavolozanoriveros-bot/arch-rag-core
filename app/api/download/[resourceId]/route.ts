@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
-import { google } from 'googleapis';
 import { DAILY_DOWNLOAD_LIMIT } from '@/lib/wompi';
 
 export const maxDuration = 15;
@@ -8,10 +7,9 @@ export const maxDuration = 15;
 /**
  * GET /api/download/[resourceId]
  * 
- * Protected download endpoint with Fair Use Policy.
- * Verifies auth + purchase → returns a direct Google Drive API download URL
- * with embedded short-lived access_token. Browser downloads directly from
- * Google's servers — no Vercel proxy, no blob, no file size limit.
+ * Protected download endpoint.
+ * Verifies auth + purchase/subscription → returns Google Drive URL.
+ * Google Drive handles the actual file transfer.
  */
 export async function GET(
   req: NextRequest,
@@ -24,7 +22,6 @@ export async function GET(
       return NextResponse.json({ error: 'Resource ID required' }, { status: 400 });
     }
 
-    // Get authenticated user
     const supabase = await createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -38,7 +35,7 @@ export async function GET(
     const userId = user.id;
     const serviceClient = createServiceRoleClient();
 
-    // Check access using the DB function
+    // Check access (purchase or subscription)
     const { data: hasAccess, error: accessError } = await serviceClient
       .rpc('user_has_access', {
         p_user_id: userId,
@@ -104,7 +101,7 @@ export async function GET(
       }
     }
 
-    // Get the resource info
+    // Get the resource
     const { data: resource, error: resourceError } = await serviceClient
       .from('aec_resources')
       .select('url_accion, nombre_ui, drive_file_id')
@@ -115,7 +112,7 @@ export async function GET(
       return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
     }
 
-    // Log the download (fire-and-forget)
+    // Log the download
     serviceClient
       .from('downloads')
       .insert({ user_id: userId, resource_id: resourceId })
@@ -123,51 +120,20 @@ export async function GET(
         if (error) console.error('Download log error:', error);
       });
 
-    // Extract file ID
+    // Build Google Drive download URL
     const fileId = resource.drive_file_id || extractFileId(resource.url_accion);
+    let downloadUrl: string;
 
-    if (!fileId) {
-      // Fallback: return the raw url_accion
-      return NextResponse.json({
-        ok: true,
-        downloadUrl: resource.url_accion,
-        fileName: resource.nombre_ui || 'download',
-      });
+    if (fileId) {
+      downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`;
+    } else {
+      downloadUrl = resource.url_accion;
     }
-
-    // Generate a short-lived Google Drive API access token
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        private_key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      },
-      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
-    });
-
-    const accessToken = await auth.getAccessToken();
-    if (!accessToken) {
-      // Fallback to Google Drive public URL
-      return NextResponse.json({
-        ok: true,
-        downloadUrl: `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`,
-        fileName: resource.nombre_ui || 'download',
-      });
-    }
-
-    // Get file name from Drive
-    const drive = google.drive({ version: 'v3', auth });
-    const fileMeta = await drive.files.get({ fileId, fields: 'name' });
-    const fileName = fileMeta.data.name || `${resource.nombre_ui || 'download'}`;
-
-    // Return direct Google Drive API URL with embedded token
-    // Browser downloads directly from Google — no proxy, no blob, no size limit,
-    // no virus scan confirmation page
-    const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&access_token=${accessToken}`;
 
     return NextResponse.json({
       ok: true,
       downloadUrl,
-      fileName,
+      fileName: resource.nombre_ui || 'download',
     });
 
   } catch (error) {
@@ -176,7 +142,6 @@ export async function GET(
   }
 }
 
-/** Extract Google Drive file ID from various URL formats */
 function extractFileId(url: string): string | null {
   const patterns = [
     /[?&]id=([a-zA-Z0-9_-]+)/,

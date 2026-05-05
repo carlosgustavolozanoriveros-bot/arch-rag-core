@@ -359,7 +359,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     }
   }, [userId, onRequireLogin]);
 
-  // Trigger download via Google Drive API (direct, no proxy)
+  // Trigger download via Google Drive URL
   const triggerDownload = useCallback(async (resourceId: string) => {
     // Prevent duplicate downloads (survives component remount)
     const guardKey = `aec_downloading_${resourceId}`;
@@ -367,7 +367,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     localStorage.setItem(guardKey, '1');
     setCardState('downloading');
     try {
-      // Call API to verify access and get Google Drive download URL with token
+      // Call API to verify access and get Google Drive download URL
       const res = await fetch(`/api/download/${resourceId}`);
       const data = await res.json();
       
@@ -390,26 +390,17 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       // Access confirmed — remove pending payment
       localStorage.removeItem('aec_pending_payment');
       
-      // Download via hidden <a> tag — browser downloads directly from Google
-      // No new tab, no iframe, no blob in memory, no Vercel proxy
+      // Open Google Drive download URL
       if (data.downloadUrl) {
-        const link = document.createElement('a');
-        link.href = data.downloadUrl;
-        link.download = data.fileName || 'download';
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        window.open(data.downloadUrl, '_blank');
       }
 
-      // Clean up after a brief delay
-      setTimeout(() => {
-        localStorage.removeItem(guardKey);
-        localStorage.setItem(`aec_download_done_${resourceId}`, Date.now().toString());
-        setHasPurchased(true);
-        hasPurchasedRef.current = true;
-        setCardState('purchased');
-      }, 2000);
+      // Clean up
+      localStorage.removeItem(guardKey);
+      localStorage.setItem(`aec_download_done_${resourceId}`, Date.now().toString());
+      setHasPurchased(true);
+      hasPurchasedRef.current = true;
+      setCardState('purchased');
     } catch (err) {
       console.error('Failed to trigger download:', err);
       localStorage.removeItem(guardKey);
