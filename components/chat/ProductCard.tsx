@@ -507,18 +507,22 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
     setCheckoutData(null);
 
-    // For BOTH single and subscription: DON'T download here.
-    // Wompi always redirects the page when clicking "Volver al comercio",
-    // so the polling system will handle the download on reload with proper
-    // "Descargando..." UI feedback.
-    setCardState('loading');
-
     if (isSub) {
+      // For subscriptions: Wompi always redirects, polling handles it
+      setCardState('loading');
       setTimeout(() => {
         window.dispatchEvent(new Event('subscription_purchased'));
       }, 100);
+    } else {
+      // For single purchases: trigger download immediately via streaming API
+      // The polling is just a fallback if Wompi redirects before this completes
+      localStorage.removeItem(`aec_downloading_${product.id}`);
+      setCardState('downloading');
+      setTimeout(() => {
+        triggerDownload(product.id);
+      }, 500);
     }
-  }, [product.id, checkoutData]);
+  }, [product.id, triggerDownload, checkoutData]);
 
   const handleCheckoutError = useCallback((error: string) => {
     console.error('Payment error:', error);
