@@ -180,10 +180,13 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
             // Start polling, up to 15 retries (30 seconds total)
             pollPurchase(15);
             return;
-          } else {
+          } else if (Date.now() - payment.timestamp >= 300000) {
+            // Only remove if expired (>5 min) — DON'T remove just because
+            // productId doesn't match, other cards need it
             localStorage.removeItem('aec_pending_payment');
           }
         } catch (e) {
+          // Only remove on parse error
           localStorage.removeItem('aec_pending_payment');
         }
       }
