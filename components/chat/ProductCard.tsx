@@ -359,7 +359,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     }
   }, [userId, onRequireLogin]);
 
-  // Trigger download via Google Drive redirect
+  // Trigger download via Google Drive API (direct, no proxy)
   const triggerDownload = useCallback(async (resourceId: string) => {
     // Prevent duplicate downloads (survives component remount)
     const guardKey = `aec_downloading_${resourceId}`;
@@ -367,7 +367,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     localStorage.setItem(guardKey, '1');
     setCardState('downloading');
     try {
-      // Call API to verify access and get Google Drive download URL
+      // Call API to verify access and get Google Drive download URL with token
       const res = await fetch(`/api/download/${resourceId}`);
       const data = await res.json();
       
@@ -390,17 +390,16 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       // Access confirmed — remove pending payment
       localStorage.removeItem('aec_pending_payment');
       
-      // Trigger Google Drive download in background (no new tab)
-      // Use a hidden iframe so the download starts silently
+      // Download via hidden <a> tag — browser downloads directly from Google
+      // No new tab, no iframe, no blob in memory, no Vercel proxy
       if (data.downloadUrl) {
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = data.downloadUrl;
-        document.body.appendChild(iframe);
-        // Remove iframe after download starts
-        setTimeout(() => {
-          try { document.body.removeChild(iframe); } catch (e) { /* ignore */ }
-        }, 5000);
+        const link = document.createElement('a');
+        link.href = data.downloadUrl;
+        link.download = data.fileName || 'download';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
 
       // Clean up after a brief delay

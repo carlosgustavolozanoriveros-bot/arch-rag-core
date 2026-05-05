@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { google } from 'googleapis';
 import { DAILY_DOWNLOAD_LIMIT } from '@/lib/wompi';
 
 export const maxDuration = 15;
@@ -8,8 +9,9 @@ export const maxDuration = 15;
  * GET /api/download/[resourceId]
  * 
  * Protected download endpoint with Fair Use Policy.
- * Verifies auth + purchase → returns Google Drive download URL.
- * Google Drive handles the actual file transfer (no Vercel limits).
+ * Verifies auth + purchase → returns a direct Google Drive API download URL
+ * with embedded short-lived access_token. Browser downloads directly from
+ * Google's servers — no Vercel proxy, no blob, no file size limit.
  */
 export async function GET(
   req: NextRequest,
@@ -121,23 +123,51 @@ export async function GET(
         if (error) console.error('Download log error:', error);
       });
 
-    // Build Google Drive direct download URL
+    // Extract file ID
     const fileId = resource.drive_file_id || extractFileId(resource.url_accion);
-    
-    let downloadUrl: string;
-    if (fileId) {
-      // Direct download URL with confirm=t to bypass virus scan warning
-      downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`;
-    } else {
-      // Fallback to the raw url_accion
-      downloadUrl = resource.url_accion;
+
+    if (!fileId) {
+      // Fallback: return the raw url_accion
+      return NextResponse.json({
+        ok: true,
+        downloadUrl: resource.url_accion,
+        fileName: resource.nombre_ui || 'download',
+      });
     }
 
-    // Return the download URL for the frontend to open
+    // Generate a short-lived Google Drive API access token
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        private_key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      },
+      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+    });
+
+    const accessToken = await auth.getAccessToken();
+    if (!accessToken) {
+      // Fallback to Google Drive public URL
+      return NextResponse.json({
+        ok: true,
+        downloadUrl: `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`,
+        fileName: resource.nombre_ui || 'download',
+      });
+    }
+
+    // Get file name from Drive
+    const drive = google.drive({ version: 'v3', auth });
+    const fileMeta = await drive.files.get({ fileId, fields: 'name' });
+    const fileName = fileMeta.data.name || `${resource.nombre_ui || 'download'}`;
+
+    // Return direct Google Drive API URL with embedded token
+    // Browser downloads directly from Google — no proxy, no blob, no size limit,
+    // no virus scan confirmation page
+    const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&access_token=${accessToken}`;
+
     return NextResponse.json({
       ok: true,
       downloadUrl,
-      fileName: resource.nombre_ui || 'download',
+      fileName,
     });
 
   } catch (error) {
