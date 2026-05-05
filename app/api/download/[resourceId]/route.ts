@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { shareFileWithEmail } from '@/lib/google-drive';
 import { DAILY_DOWNLOAD_LIMIT } from '@/lib/wompi';
 
 export const maxDuration = 15;
@@ -8,8 +9,7 @@ export const maxDuration = 15;
  * GET /api/download/[resourceId]
  * 
  * Protected download endpoint.
- * Verifies auth + purchase/subscription → returns Google Drive URL.
- * Google Drive handles the actual file transfer.
+ * Verifies auth + purchase/subscription → shares file with user → returns Google Drive URL.
  */
 export async function GET(
   req: NextRequest,
@@ -33,6 +33,7 @@ export async function GET(
     }
 
     const userId = user.id;
+    const userEmail = user.email;
     const serviceClient = createServiceRoleClient();
 
     // Check access (purchase or subscription)
@@ -112,6 +113,19 @@ export async function GET(
       return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
     }
 
+    const fileId = resource.drive_file_id || extractFileId(resource.url_accion);
+
+    // For subscribers (not individual purchase), share the file with their email
+    // Individual purchases are already shared by the webhook
+    if (!hasSinglePurchase && fileId && userEmail) {
+      try {
+        await shareFileWithEmail(fileId, userEmail);
+      } catch (shareError) {
+        console.error('Share error (non-blocking):', shareError);
+        // Continue anyway — file might already be shared via folder
+      }
+    }
+
     // Log the download
     serviceClient
       .from('downloads')
@@ -121,9 +135,7 @@ export async function GET(
       });
 
     // Build Google Drive download URL
-    const fileId = resource.drive_file_id || extractFileId(resource.url_accion);
     let downloadUrl: string;
-
     if (fileId) {
       downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`;
     } else {
