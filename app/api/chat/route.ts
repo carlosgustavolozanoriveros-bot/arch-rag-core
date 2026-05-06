@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
   // Inline tool with result capture
   const searchProductsTool = tool({
-    description: 'Busca recursos AEC en el catálogo por similitud semántica. Usa esta herramienta cuando el usuario describe lo que necesita para su proyecto. NOTA CRÍTICA: El sistema mostrará las visualizaciones de las tarjetas automáticamente. NO incluyas listas manuales, viñetas, descripciones ni precios de los productos en tu respuesta de texto. Solo da un breve mensaje entusiasta de que encontraste opciones.',
+    description: 'Busca recursos AEC en el catálogo. DEBES usar esta herramienta INMEDIATAMENTE cuando el usuario mencione cualquier recurso, software, proyecto o necesidad AEC. NO hagas preguntas primero — busca de una vez. El sistema mostrará las tarjetas de producto automáticamente. Tu respuesta de texto debe ser BREVE (2-3 oraciones máximo), sin listas ni precios.',
     inputSchema: z.object({
       query: z.string().describe('La consulta de búsqueda en lenguaje natural'),
     }),
