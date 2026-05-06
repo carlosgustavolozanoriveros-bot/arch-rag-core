@@ -390,9 +390,11 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       // Access confirmed — remove pending payment
       localStorage.removeItem('aec_pending_payment');
       
-      // Open Google Drive download URL
+      // Navigate to Google Drive download URL
+      // Using location.assign avoids popup blocker (window.open gets blocked from async callbacks)
+      // Google Drive responds with a file download — browser stays on this page
       if (data.downloadUrl) {
-        window.open(data.downloadUrl, '_blank');
+        window.location.assign(data.downloadUrl);
       }
 
       // Clean up
