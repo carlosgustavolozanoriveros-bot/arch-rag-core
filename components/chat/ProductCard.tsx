@@ -361,10 +361,17 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
 
   // Trigger download via Google Drive URL
   const triggerDownload = useCallback(async (resourceId: string) => {
-    // Prevent duplicate downloads (survives component remount)
+    // Prevent duplicate downloads — check BOTH guards
+    const doneKey = `aec_download_done_${resourceId}`;
+    if (localStorage.getItem(doneKey)) {
+      setCardState(isUserSubscriberRef.current ? 'subscriber' : 'purchased');
+      return;
+    }
     const guardKey = `aec_downloading_${resourceId}`;
     if (localStorage.getItem(guardKey)) return;
     localStorage.setItem(guardKey, '1');
+    // Mark as done IMMEDIATELY to block any concurrent polling
+    localStorage.setItem(doneKey, Date.now().toString());
     setCardState('downloading');
     try {
       // Call API to verify access and get Google Drive download URL
@@ -373,6 +380,7 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       
       if (!res.ok) {
         console.error('Download error:', data.error);
+        localStorage.removeItem(doneKey); // Allow retry on error
         
         // Handle daily limit reached
         if (res.status === 429 && data.dailyLimitReached) {
@@ -390,22 +398,20 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
       // Access confirmed — remove pending payment
       localStorage.removeItem('aec_pending_payment');
       
-      // Navigate to Google Drive download URL
-      // Using location.assign avoids popup blocker (window.open gets blocked from async callbacks)
-      // Google Drive responds with a file download — browser stays on this page
+      // Open Google Drive download URL in new tab
       if (data.downloadUrl) {
-        window.location.assign(data.downloadUrl);
+        window.open(data.downloadUrl, '_blank');
       }
 
       // Clean up
       localStorage.removeItem(guardKey);
-      localStorage.setItem(`aec_download_done_${resourceId}`, Date.now().toString());
       setHasPurchased(true);
       hasPurchasedRef.current = true;
       setCardState('purchased');
     } catch (err) {
       console.error('Failed to trigger download:', err);
       localStorage.removeItem(guardKey);
+      localStorage.removeItem(doneKey); // Allow retry on error
       setCardState(isUserSubscriberRef.current ? 'subscriber' : (hasPurchasedRef.current ? 'purchased' : 'idle'));
     }
   }, [product.id]);
