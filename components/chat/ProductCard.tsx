@@ -502,9 +502,45 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
     setCardState('loading'); // Show "Procesando pago..."
 
     if (isSub) {
-      setTimeout(() => {
-        window.dispatchEvent(new Event('subscription_purchased'));
-      }, 100);
+      // For subscriptions: poll until webhook confirms subscriber role,
+      // then download THIS specific file and notify other cards
+      const supabase = createClient();
+      const pollSubscription = async (retries: number) => {
+        const { data: freshProfile } = await supabase
+          .from('user_profiles')
+          .select('role, subscription_expires_at')
+          .eq('id', userId)
+          .single();
+
+        const confirmed = freshProfile && (
+          freshProfile.role === 'admin' ||
+          (freshProfile.role === 'subscriber' && freshProfile.subscription_expires_at && new Date(freshProfile.subscription_expires_at) > new Date())
+        );
+
+        if (confirmed) {
+          // Subscription confirmed — update state
+          localStorage.removeItem('aec_pending_payment');
+          setIsUserSubscriber(true);
+          isUserSubscriberRef.current = true;
+          // Notify other cards to show "Descargar"
+          window.dispatchEvent(new Event('subscription_purchased'));
+          // Download the specific file from this card
+          localStorage.removeItem(`aec_downloading_${product.id}`);
+          triggerDownload(product.id);
+          return;
+        }
+
+        if (retries > 0) {
+          setTimeout(() => pollSubscription(retries - 1), 2000);
+        } else {
+          // Timeout — user can retry manually
+          setIsUserSubscriber(true);
+          isUserSubscriberRef.current = true;
+          setCardState('subscriber');
+          window.dispatchEvent(new Event('subscription_purchased'));
+        }
+      };
+      setTimeout(() => pollSubscription(25), 2000);
     } else {
       // For single purchases: poll until webhook confirms, then download
       const supabase = createClient();
@@ -536,7 +572,6 @@ export function ProductCard({ product, userRole, purchased = false, onRequireLog
           hasPurchasedRef.current = true;
         }
       };
-      // Start polling after 2 seconds (give webhook time)
       setTimeout(() => pollAndDownload(25), 2000);
     }
   }, [product.id, userId, triggerDownload, checkoutData]);
